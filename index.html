@@ -682,6 +682,11 @@
 
   .trim-handle.hidden { display: none; }
 
+  /* track-wave-wrap sits flush against .track-card, which clips overflow,
+     so keep its handles fully inside the bounds instead of centering on the edge */
+  .track-wave-wrap .trim-handle.start { transform: translateX(0); }
+  .track-wave-wrap .trim-handle.end   { transform: translateX(-100%); }
+
   /* dimmed regions outside trim */
   .trim-shade {
     position: absolute;
