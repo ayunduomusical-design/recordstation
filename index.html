@@ -521,7 +521,9 @@
   /* ── VU METER ── */
   .vu-wrap { display: grid; gap: 6px; margin-top: 4px; }
   .vu-label { color: var(--muted); font-size: 11px; }
+  .vu-row { display: flex; align-items: center; gap: 8px; }
   .vu-meter {
+    flex: 1;
     width: 100%;
     height: 10px;
     border-radius: 999px;
@@ -536,6 +538,27 @@
     background: linear-gradient(90deg, var(--green, #8fd29c) 0%, var(--green, #8fd29c) 60%, var(--amber-2) 80%, #e0584f 95%);
     transition: width .05s linear;
   }
+  .clip-light {
+    flex: 0 0 auto;
+    min-height: 0;
+    padding: 3px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--soft);
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    transition: background .08s ease, color .08s ease, box-shadow .08s ease, border-color .08s ease;
+  }
+  .clip-light.active {
+    background: var(--red);
+    border-color: var(--red);
+    color: #2a0a07;
+    box-shadow: 0 0 12px rgba(255,107,95,.7);
+  }
+  .channel-status { display: block; margin-top: 2px; }
 
   /* ── MID MODULES (entre loop y pista de grabacion) ── */
   .mid-modules {
@@ -1225,10 +1248,14 @@
           <option value="">Entrada predeterminada</option>
         </select>
         <span class="input-hint">Elige tu interfaz (ej. UMC22) para grabar desde el canal conectado. Si la lista esta vacia, dale permiso al microfono y vuelve a abrir este menu.</span>
+        <span class="input-hint channel-status" id="channel-status"></span>
         <div class="vu-wrap" aria-label="Nivel de entrada">
           <span class="vu-label">Nivel de entrada</span>
-          <div class="vu-meter" id="vu-meter">
-            <div class="vu-fill" id="vu-fill"></div>
+          <div class="vu-row">
+            <div class="vu-meter" id="vu-meter">
+              <div class="vu-fill" id="vu-fill"></div>
+            </div>
+            <span class="clip-light" id="clip-light" title="Clipping (la señal toco 0dB)">CLIP</span>
           </div>
         </div>
       </section>
@@ -1268,6 +1295,14 @@ const state = {
   vuRAF: null,
   activeTarget: null,
   loopZoom: 1,
+  // Captura PCM (AudioWorklet) y ruteo de canal de entrada
+  usingWorklet: false,
+  workletReady: false,
+  workletAttempted: false,
+  recWorkletNode: null,
+  recSilentGain: null,
+  activeRouting: null,
+  recChannelUsed: null,
   tracks: {
     track2: {
       buffer: null, sourceNode: null, chunks: [],
@@ -1308,6 +1343,8 @@ const els = {
   bpmUp:       document.getElementById("bpm-up"),
   beatLights:  document.querySelectorAll(".beat-light"),
   vuFill:           document.getElementById("vu-fill"),
+  clipLight:        document.getElementById("clip-light"),
+  channelStatus:    document.getElementById("channel-status"),
   countinBarsDisplay: document.getElementById("countin-bars-display"),
   countinBarsDown:    document.getElementById("countin-bars-down"),
   countinBarsUp:      document.getElementById("countin-bars-up"),
@@ -1404,7 +1441,235 @@ async function initAudio() {
     state.gainNode.connect(state.audioCtx.destination);
   }
   if (state.audioCtx.state === "suspended") await state.audioCtx.resume();
+  await ensurePCMWorklet();
   return true;
+}
+
+/* ─── CAPTURA PCM (AudioWorklet) ───
+   Sustituye a MediaRecorder para grabar: captura las muestras Float32
+   crudas del canal elegido, sin recompresion con perdida (webm/opus). */
+const PCM_WORKLET_NAME = "ayun-pcm-recorder";
+const pcmWorkletSource = `
+class AyunPCMRecorder extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this._bufferSize = 4096;
+    this._chunk = new Float32Array(this._bufferSize);
+    this._writeIndex = 0;
+    this.port.onmessage = (e) => {
+      if (e.data === "flush" && this._writeIndex > 0) {
+        this.port.postMessage(this._chunk.slice(0, this._writeIndex));
+        this._writeIndex = 0;
+      }
+    };
+  }
+  process(inputs) {
+    const input = inputs[0];
+    if (input && input[0] && input[0].length) {
+      const data = input[0];
+      for (let i = 0; i < data.length; i++) {
+        this._chunk[this._writeIndex++] = data[i];
+        if (this._writeIndex >= this._bufferSize) {
+          this.port.postMessage(this._chunk.slice(0));
+          this._writeIndex = 0;
+        }
+      }
+    }
+    return true;
+  }
+}
+registerProcessor("${PCM_WORKLET_NAME}", AyunPCMRecorder);
+`;
+
+async function ensurePCMWorklet() {
+  if (state.workletReady) return true;
+  if (state.workletAttempted) return state.workletReady;
+  state.workletAttempted = true;
+  if (!state.audioCtx || !state.audioCtx.audioWorklet) return false;
+  try {
+    const blob = new Blob([pcmWorkletSource], { type: "application/javascript" });
+    const url = URL.createObjectURL(blob);
+    await state.audioCtx.audioWorklet.addModule(url);
+    URL.revokeObjectURL(url);
+    state.workletReady = true;
+  } catch (e) {
+    console.error("No se pudo iniciar la captura PCM (AudioWorklet). Se usara MediaRecorder como respaldo.", e);
+    state.workletReady = false;
+  }
+  return state.workletReady;
+}
+
+/* ─── RUTEO DE ENTRADA: extraer especificamente el canal 2 (mono) ───
+   getUserMedia/channelCount solo controla CUANTOS canales se piden,
+   no CUAL canal usar. Por eso pedimos stream estereo y luego separamos
+   los canales con un ChannelSplitterNode, tomando solo el indice 1
+   (canal 2). Si el dispositivo solo entrega 1 canal, se usa ese. */
+function prepareInputRouting(stream) {
+  const inputSource = state.audioCtx.createMediaStreamSource(stream);
+  const audioTrack = stream.getAudioTracks()[0];
+  const settings = audioTrack && audioTrack.getSettings ? audioTrack.getSettings() : {};
+  const channelCount = inputSource.channelCount || settings.channelCount || 1;
+
+  if (channelCount >= 2) {
+    const splitter = state.audioCtx.createChannelSplitter(2);
+    inputSource.connect(splitter);
+    return {
+      splitter, inputSource, channelUsed: 2,
+      connectTo(node) { splitter.connect(node, 1, 0); },
+      disconnectFrom(node) { try { splitter.disconnect(node, 1, 0); } catch (e) {} }
+    };
+  }
+  return {
+    splitter: null, inputSource, channelUsed: 1,
+    connectTo(node) { inputSource.connect(node); },
+    disconnectFrom(node) { try { inputSource.disconnect(node); } catch (e) {} }
+  };
+}
+
+function updateChannelStatus(channelUsed) {
+  if (!els.channelStatus) return;
+  els.channelStatus.textContent = channelUsed === 2
+    ? "Grabando en mono desde el canal 2 de la interfaz."
+    : "Se detecto 1 solo canal de entrada: grabando en mono desde ese canal.";
+}
+
+function concatFloat32(chunks) {
+  let total = 0;
+  for (const c of chunks) total += c.length;
+  const out = new Float32Array(total);
+  let offset = 0;
+  for (const c of chunks) { out.set(c, offset); offset += c.length; }
+  return out;
+}
+
+// Codifica muestras Float32 mono a un WAV PCM de 16 bits (sin perdida, sin recompresion)
+function encodeWavMono(samples, sampleRate) {
+  const bytesPerSample = 2;
+  const byteRate = sampleRate * bytesPerSample;
+  const dataSize = samples.length * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  function writeString(offset, str) {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);   // PCM
+  view.setUint16(22, 1, true);   // 1 canal (mono)
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, bytesPerSample, true);
+  view.setUint16(34, 16, true);  // bits por muestra
+  writeString(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return new Blob([buffer], { type: "audio/wav" });
+}
+
+// Desconecta y limpia todo el grafo de grabacion (worklet/mediaRecorder/splitter/stream)
+function teardownRecordingGraph(targetId) {
+  if (state.recWorkletNode) {
+    try { state.recWorkletNode.disconnect(); } catch (e) {}
+    state.recWorkletNode.port.onmessage = null;
+    state.recWorkletNode = null;
+  }
+  if (state.recSilentGain) {
+    try { state.recSilentGain.disconnect(); } catch (e) {}
+    state.recSilentGain = null;
+  }
+  if (state.activeRouting) {
+    try { state.activeRouting.inputSource.disconnect(); } catch (e) {}
+    if (state.activeRouting.splitter) { try { state.activeRouting.splitter.disconnect(); } catch (e) {} }
+    state.activeRouting = null;
+  }
+  state.mediaRecorder = null;
+  state.mediaStream?.getTracks().forEach(t => t.stop());
+  state.mediaStream = null;
+  if (targetId === "main") state.analyser = null;
+  else if (targetId && state.tracks[targetId]) state.tracks[targetId].analyser = null;
+}
+
+// Cierra una toma (loop principal o pista) construyendo el AudioBuffer final
+// a partir de las muestras PCM capturadas (o, en modo de respaldo, decodificando el blob de MediaRecorder)
+async function finalizeCapture(targetId) {
+  const usedWorklet = state.usingWorklet;
+  const chunks = state.recordedChunks;
+  state.recordedChunks = [];
+  teardownRecordingGraph(targetId);
+
+  const isMain = targetId === "main";
+  const track = isMain ? null : state.tracks[targetId];
+
+  if (!chunks.length) {
+    if (isMain) setStatus(state.loopBuffer ? "ready" : "idle");
+    else setTrackStatus(targetId, track.buffer ? "ready" : "empty");
+    return;
+  }
+
+  let buffer, blobForStorage;
+
+  if (usedWorklet) {
+    const samples = concatFloat32(chunks);
+    if (!samples.length) {
+      if (isMain) setStatus(state.loopBuffer ? "ready" : "idle");
+      else setTrackStatus(targetId, track.buffer ? "ready" : "empty");
+      return;
+    }
+    const sampleRate = state.audioCtx.sampleRate;
+    buffer = state.audioCtx.createBuffer(1, samples.length, sampleRate);
+    buffer.copyToChannel(samples, 0);
+    blobForStorage = encodeWavMono(samples, sampleRate);
+  } else {
+    // Respaldo heredado: MediaRecorder (solo si el navegador no soporta AudioWorklet)
+    const blob = new Blob(chunks, { type: chunks[0].type || "audio/webm" });
+    const ab = await blob.arrayBuffer();
+    try {
+      buffer = await state.audioCtx.decodeAudioData(ab);
+    } catch (e) {
+      if (isMain) { showMicError("La toma no pudo procesarse. Intenta grabar nuevamente."); setStatus("idle"); }
+      else { showMicError(`La pista "${track.name}" no pudo procesarse.`); setTrackStatus(targetId, "empty"); }
+      return;
+    }
+    blobForStorage = blob;
+  }
+
+  if (isMain) {
+    state.loopBlob = blobForStorage;
+    state.loopBuffer = buffer;
+    state.loopDuration = buffer.duration;
+    els.durationVal.textContent = state.loopDuration.toFixed(1);
+    els.btnPlay.disabled = false;
+    els.btnClear.disabled = false;
+    els.btnDownload.disabled = false;
+    buildWaveformData();
+    drawWaveform();
+    state.loopTrim.startRatio = 0; state.loopTrim.endRatio = 1; state.loopTrim.originalBuffer = null;
+    resetTrimHistory("loop");
+    showTrimHandles("loop");
+    setStatus("ready");
+    startPlayback();
+  } else {
+    track.buffer = buffer;
+    track.duration = buffer.duration;
+    try { track.dataUrl = await blobToDataUrl(blobForStorage); } catch (e) { track.dataUrl = ""; }
+    buildTrackWaveformData(targetId);
+    drawTrackWaveform(targetId);
+    track.trim.startRatio = 0; track.trim.endRatio = 1; track.trim.originalBuffer = null;
+    resetTrimHistory(targetId);
+    showTrimHandles(targetId);
+    if (track.dataUrl) saveTrack(targetId);
+    setTrackStatus(targetId, "ready");
+  }
 }
 
 function showMicError(msg) {
@@ -1421,7 +1686,12 @@ function isAnyTrackRecording() {
 // Intenta obtener el audio sin bloquear en file:// usando constraints permisivos
 async function getMic() {
   const chosenId = els.inputDevice ? els.inputDevice.value : "";
-  const baseAudioConstraints = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+  const baseAudioConstraints = {
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+    channelCount: { ideal: 2 }
+  };
   const constraints = {
     audio: chosenId
       ? { ...baseAudioConstraints, deviceId: { exact: chosenId } }
@@ -1470,6 +1740,13 @@ async function populateInputDevices() {
       els.inputDevice.value = savedId;
     } else if (previousValue && inputs.some(d => d.deviceId === previousValue)) {
       els.inputDevice.value = previousValue;
+    } else {
+      // Sin preferencia guardada: si hay una UMC22 (u otra Behringer/UMC) conectada, usarla por defecto
+      const auto = inputs.find(d => /UMC\s*22|UMC\b|Behringer/i.test(d.label || ""));
+      if (auto) {
+        els.inputDevice.value = auto.deviceId;
+        try { localStorage.setItem("ayun-input-device-id", auto.deviceId); } catch (e) {}
+      }
     }
   } catch (e) {
     // enumerateDevices puede fallar sin permiso previo; se reintenta luego de getUserMedia
@@ -1497,26 +1774,38 @@ function getActiveAnalyser() {
 
 function startVUMeter() {
   cancelAnimationFrame(state.vuRAF);
+  const CLIP_THRESHOLD = 0.98; // ~ -0.18 dBFS: se considera clipping
+  const CLIP_HOLD_MS = 1200;   // tiempo que se mantiene encendido el indicador
+  const buf = new Float32Array(512);
+  let clipHoldUntil = 0;
   function loop() {
     const stillActive = state.countInActive || state.isRecording || isAnyTrackRecording();
     const analyser = getActiveAnalyser();
     if (analyser) {
-      const buf = new Uint8Array(analyser.fftSize);
-      analyser.getByteTimeDomainData(buf);
+      const data = buf.length === analyser.fftSize ? buf : new Float32Array(analyser.fftSize);
+      analyser.getFloatTimeDomainData(data);
       let sumSquares = 0;
-      for (let i = 0; i < buf.length; i++) {
-        const v = (buf[i] - 128) / 128;
+      let peak = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = data[i];
         sumSquares += v * v;
+        const av = Math.abs(v);
+        if (av > peak) peak = av;
       }
-      const rms = Math.sqrt(sumSquares / buf.length);
+      const rms = Math.sqrt(sumSquares / data.length);
       const pct = Math.max(0, Math.min(100, Math.round(rms * 220)));
       if (els.vuFill) els.vuFill.style.width = pct + "%";
-    } else if (els.vuFill) {
-      els.vuFill.style.width = "0%";
+
+      if (peak >= CLIP_THRESHOLD) clipHoldUntil = performance.now() + CLIP_HOLD_MS;
+      if (els.clipLight) els.clipLight.classList.toggle("active", performance.now() < clipHoldUntil);
+    } else {
+      if (els.vuFill) els.vuFill.style.width = "0%";
+      if (els.clipLight) els.clipLight.classList.remove("active");
     }
     if (!stillActive) {
       state.vuRAF = null;
       if (els.vuFill) els.vuFill.style.width = "0%";
+      if (els.clipLight) els.clipLight.classList.remove("active");
       return;
     }
     state.vuRAF = requestAnimationFrame(loop);
@@ -1528,6 +1817,7 @@ function stopVUMeter() {
   cancelAnimationFrame(state.vuRAF);
   state.vuRAF = null;
   if (els.vuFill) els.vuFill.style.width = "0%";
+  if (els.clipLight) els.clipLight.classList.remove("active");
 }
 
 /* ─── LOOP RECORDING ─── */
@@ -1546,23 +1836,44 @@ async function startRecording() {
   stopPlayback();
   stopMetronome(false);
 
-  const inputSource = state.audioCtx.createMediaStreamSource(state.mediaStream);
+  const routing = prepareInputRouting(state.mediaStream);
+  state.activeRouting = routing;
+  state.recChannelUsed = routing.channelUsed;
+  updateChannelStatus(routing.channelUsed);
+
   state.analyser = state.audioCtx.createAnalyser();
   state.analyser.fftSize = 512;
-  inputSource.connect(state.analyser);
+  routing.connectTo(state.analyser);
 
   state.recordedChunks = [];
-  state.mediaRecorder = new MediaRecorder(state.mediaStream);
-  state.mediaRecorder.addEventListener("dataavailable", ev => {
-    if (ev.data.size > 0) state.recordedChunks.push(ev.data);
-  });
-  state.mediaRecorder.addEventListener("stop", handleRecordingStop, { once: true });
+  const workletOk = await ensurePCMWorklet();
+  state.usingWorklet = workletOk;
+
+  if (workletOk) {
+    state.recWorkletNode = new AudioWorkletNode(state.audioCtx, PCM_WORKLET_NAME);
+    state.recWorkletNode.port.onmessage = ev => state.recordedChunks.push(ev.data);
+    state.recSilentGain = state.audioCtx.createGain();
+    state.recSilentGain.gain.value = 0; // nunca se escucha, solo mantiene el nodo activo en el grafo
+    state.recWorkletNode.connect(state.recSilentGain).connect(state.audioCtx.destination);
+  } else {
+    // Respaldo si el navegador no soporta AudioWorklet
+    state.mediaRecorder = new MediaRecorder(state.mediaStream);
+    state.mediaRecorder.addEventListener("dataavailable", ev => {
+      if (ev.data.size > 0) state.recordedChunks.push(ev.data);
+    });
+  }
   state.activeTarget = "main";
 
   startCountIn(() => {
-    if (!state.mediaRecorder || !state.mediaStream || state.activeTarget !== "main") return;
-    state.mediaRecorder.start();
-    state.isRecording = true;
+    if (state.activeTarget !== "main") return;
+    if (workletOk) {
+      routing.connectTo(state.recWorkletNode); // recien aqui empieza a capturarse audio (no durante el cuenta-in)
+      state.isRecording = true;
+    } else {
+      if (!state.mediaRecorder) return;
+      state.mediaRecorder.start();
+      state.isRecording = true;
+    }
     setStatus("recording");
     startLiveWaveform();
     if (state.metroOn) startMetronome();
@@ -1573,46 +1884,24 @@ function stopRecording() {
   if (state.countInActive) {
     cancelCountIn();
     stopVUMeter();
-    state.mediaStream?.getTracks().forEach(t => t.stop());
-    state.mediaStream = null; state.mediaRecorder = null;
-    state.analyser = null; state.activeTarget = null;
+    teardownRecordingGraph("main");
+    state.activeTarget = null;
     setStatus(state.loopBuffer ? "ready" : "idle");
     return;
   }
-  if (!state.mediaRecorder || !state.isRecording) return;
-  state.mediaRecorder.stop();
-  state.mediaStream?.getTracks().forEach(t => t.stop());
-  state.mediaStream = null;
+  if (!state.isRecording) return;
   state.isRecording = false;
-  state.activeTarget = null;
   stopVUMeter();
   cancelAnimationFrame(state.waveformRAF);
-}
 
-async function handleRecordingStop() {
-  if (!state.recordedChunks.length) { setStatus("idle"); return; }
-  const blob = new Blob(state.recordedChunks, { type: state.recordedChunks[0].type || "audio/webm" });
-  state.loopBlob = blob;
-  const ab = await blob.arrayBuffer();
-  try {
-    state.loopBuffer = await state.audioCtx.decodeAudioData(ab);
-  } catch (e) {
-    showMicError("La toma no pudo procesarse. Intenta grabar nuevamente.");
-    setStatus("idle"); return;
+  if (state.usingWorklet && state.recWorkletNode && state.activeRouting) {
+    state.activeRouting.disconnectFrom(state.recWorkletNode); // corta la entrada de audio ya mismo
+    state.recWorkletNode.port.postMessage("flush");           // pide el ultimo bloque parcial
+    setTimeout(() => { state.activeTarget = null; finalizeCapture("main"); }, 80);
+  } else if (state.mediaRecorder) {
+    state.mediaRecorder.addEventListener("stop", () => { state.activeTarget = null; finalizeCapture("main"); }, { once: true });
+    state.mediaRecorder.stop();
   }
-  state.loopDuration = state.loopBuffer.duration;
-  els.durationVal.textContent = state.loopDuration.toFixed(1);
-  els.btnPlay.disabled = false;
-  els.btnClear.disabled = false;
-  els.btnDownload.disabled = false;
-  buildWaveformData();
-  drawWaveform();
-  // reset trim and show handles
-  state.loopTrim.startRatio = 0; state.loopTrim.endRatio = 1; state.loopTrim.originalBuffer = null;
-  resetTrimHistory("loop");
-  showTrimHandles("loop");
-  setStatus("ready");
-  startPlayback();
 }
 
 /* ─── TRACK RECORDING (single track) ─── */
@@ -1634,23 +1923,43 @@ async function startTrackRecording(id) {
   const track = state.tracks[id];
   track.chunks = [];
 
-  // Connect live analyser for track waveform
-  const inputSource = state.audioCtx.createMediaStreamSource(state.mediaStream);
+  const routing = prepareInputRouting(state.mediaStream);
+  state.activeRouting = routing;
+  state.recChannelUsed = routing.channelUsed;
+  updateChannelStatus(routing.channelUsed);
+
   track.analyser = state.audioCtx.createAnalyser();
   track.analyser.fftSize = 512;
-  inputSource.connect(track.analyser);
+  routing.connectTo(track.analyser);
 
-  state.mediaRecorder = new MediaRecorder(state.mediaStream);
-  state.mediaRecorder.addEventListener("dataavailable", ev => {
-    if (ev.data.size > 0) track.chunks.push(ev.data);
-  });
-  state.mediaRecorder.addEventListener("stop", () => handleTrackStop(id), { once: true });
+  state.recordedChunks = [];
+  const workletOk = await ensurePCMWorklet();
+  state.usingWorklet = workletOk;
+
+  if (workletOk) {
+    state.recWorkletNode = new AudioWorkletNode(state.audioCtx, PCM_WORKLET_NAME);
+    state.recWorkletNode.port.onmessage = ev => state.recordedChunks.push(ev.data);
+    state.recSilentGain = state.audioCtx.createGain();
+    state.recSilentGain.gain.value = 0;
+    state.recWorkletNode.connect(state.recSilentGain).connect(state.audioCtx.destination);
+  } else {
+    state.mediaRecorder = new MediaRecorder(state.mediaStream);
+    state.mediaRecorder.addEventListener("dataavailable", ev => {
+      if (ev.data.size > 0) state.recordedChunks.push(ev.data);
+    });
+  }
   state.activeTarget = id;
 
   startCountIn(() => {
-    if (!state.mediaRecorder || !state.mediaStream || state.activeTarget !== id) return;
-    state.mediaRecorder.start();
-    track.isRecording = true;
+    if (state.activeTarget !== id) return;
+    if (workletOk) {
+      routing.connectTo(state.recWorkletNode);
+      track.isRecording = true;
+    } else {
+      if (!state.mediaRecorder) return;
+      state.mediaRecorder.start();
+      track.isRecording = true;
+    }
     setTrackStatus(id, "recording");
     startTrackLiveWaveform(id);
     if (state.metroOn) startMetronome();
@@ -1663,46 +1972,25 @@ function stopTrackRecording(id) {
   if (state.countInActive && state.activeTarget === id) {
     cancelCountIn();
     stopVUMeter();
-    state.mediaStream?.getTracks().forEach(t => t.stop());
-    state.mediaStream = null; state.mediaRecorder = null;
-    track.analyser = null; state.activeTarget = null;
+    teardownRecordingGraph(id);
+    state.activeTarget = null;
     setStatus(state.loopBuffer ? "ready" : "idle");
     setTrackStatus(id, track.buffer ? "ready" : "empty");
     return;
   }
-  if (!state.mediaRecorder || !track.isRecording) return;
-  state.mediaRecorder.stop();
-  state.mediaStream?.getTracks().forEach(t => t.stop());
-  state.mediaStream = null;
+  if (!track.isRecording) return;
   track.isRecording = false;
-  state.activeTarget = null;
   stopVUMeter();
-}
-
-async function handleTrackStop(id) {
-  const track = state.tracks[id];
   cancelAnimationFrame(track.liveRAF);
-  track.analyser = null;
 
-  if (!track.chunks.length) { setTrackStatus(id, "empty"); return; }
-  const blob = new Blob(track.chunks, { type: track.chunks[0].type || "audio/webm" });
-  const ab = await blob.arrayBuffer();
-  try {
-    track.buffer = await state.audioCtx.decodeAudioData(ab.slice(0));
-  } catch (e) {
-    showMicError(`La pista "${track.name}" no pudo procesarse.`);
-    setTrackStatus(id, "empty"); return;
+  if (state.usingWorklet && state.recWorkletNode && state.activeRouting) {
+    state.activeRouting.disconnectFrom(state.recWorkletNode);
+    state.recWorkletNode.port.postMessage("flush");
+    setTimeout(() => { state.activeTarget = null; finalizeCapture(id); }, 80);
+  } else if (state.mediaRecorder) {
+    state.mediaRecorder.addEventListener("stop", () => { state.activeTarget = null; finalizeCapture(id); }, { once: true });
+    state.mediaRecorder.stop();
   }
-  track.duration = track.buffer.duration;
-  track.dataUrl = await blobToDataUrl(blob);
-  buildTrackWaveformData(id);
-  drawTrackWaveform(id);
-  // reset trim and show handles
-  track.trim.startRatio = 0; track.trim.endRatio = 1; track.trim.originalBuffer = null;
-  resetTrimHistory(id);
-  showTrimHandles(id);
-  saveTrack(id);
-  setTrackStatus(id, "ready");
 }
 
 /* ─── TRACK PLAYBACK ─── */
