@@ -497,6 +497,108 @@
     text-align: right;
   }
 
+  .input-select {
+    width: 100%;
+    min-height: 36px;
+    background: var(--panel-2);
+    color: var(--text, #eee);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0 10px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .input-select:focus { outline: 1px solid var(--amber-2); }
+
+  .input-hint {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  /* ── VU METER ── */
+  .vu-wrap { display: grid; gap: 6px; margin-top: 4px; }
+  .vu-label { color: var(--muted); font-size: 11px; }
+  .vu-meter {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .vu-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--green, #8fd29c) 0%, var(--green, #8fd29c) 60%, var(--amber-2) 80%, #e0584f 95%);
+    transition: width .05s linear;
+  }
+
+  /* ── MID MODULES (entre loop y pista de grabacion) ── */
+  .mid-modules {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    padding: 14px 0;
+    margin: 4px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .mid-modules .module { padding-bottom: 0; border-bottom: 0; }
+
+  @media (max-width: 720px) {
+    .mid-modules { grid-template-columns: 1fr; }
+  }
+
+  .countin-row { margin-top: 4px; }
+  .countin-display {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text, #eee);
+    text-align: center;
+  }
+
+  /* ── TRIM UNDO/REDO ── */
+  .trim-undo-btn {
+    width: 30px; height: 30px;
+    flex: 0 0 auto;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .trim-undo-btn .icon { width: 16px; height: 16px; }
+  .trim-undo-btn:disabled { opacity: .35; cursor: default; }
+  .trim-undo-btn:not(:disabled):hover { color: var(--amber-2); border-color: var(--amber-2); }
+
+  /* ── DRAG & DROP ── */
+  .dropzone-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(240,179,90,.12);
+    border: 2px dashed var(--amber-2);
+    border-radius: var(--radius);
+    color: var(--amber-2);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .dropzone-overlay.show { display: flex; }
+
   .metro-top {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -955,11 +1057,18 @@
             </div>
           </div>
           <div class="empty-state" id="empty-state">El loop aparecera aqui cuando termines la primera toma.</div>
+          <div class="dropzone-overlay" id="loop-dropzone">Soltar archivo de audio aqui</div>
         </div>
         <div class="zoom-row">
           <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
           <input type="range" id="loop-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda del loop">
           <span class="readout" id="loop-zoom-readout">1.0x</span>
+          <button class="trim-undo-btn" id="loop-trim-undo" type="button" disabled title="Deshacer corte" aria-label="Deshacer corte">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"></path></svg>
+          </button>
+          <button class="trim-undo-btn" id="loop-trim-redo" type="button" disabled title="Rehacer corte" aria-label="Rehacer corte">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
+          </button>
         </div>
         <div class="timeline" aria-hidden="true">
           <div id="playhead"></div>
@@ -994,6 +1103,58 @@
         <button class="btn icon-btn" id="btn-clear" type="button" disabled aria-label="Borrar loop" title="Borrar loop">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
         </button>
+      </div>
+
+      <!-- Mid modules: Volumen / Metronomo / Atajos — entre el loop y la pista de grabacion -->
+      <div class="mid-modules" aria-label="Ajustes de reproduccion">
+        <section class="module" aria-label="Volumen">
+          <span class="section-label">Volumen</span>
+          <div class="volume-row">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm11.5-.5v7a4 4 0 0 0 0-7zm2.8-2.8v12.6a7 7 0 0 0 0-12.6z"></path></svg>
+            <input type="range" id="volume" min="0" max="100" value="80" aria-label="Volumen del loop">
+            <span class="readout" id="vol-readout">80%</span>
+          </div>
+        </section>
+
+        <section class="module" aria-label="Metronomo">
+          <span class="section-label">Metronomo visual</span>
+          <div class="metro-top">
+            <button class="metro-toggle" id="metro-toggle" type="button" aria-pressed="false">Apagado</button>
+            <div class="beats" id="beat-lights" aria-hidden="true">
+              <span class="beat-light beat1"></span>
+              <span class="beat-light"></span>
+              <span class="beat-light"></span>
+              <span class="beat-light"></span>
+            </div>
+          </div>
+          <div class="bpm-row">
+            <button class="stepper" id="bpm-down" type="button" aria-label="Bajar tempo">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v2H5z"></path></svg>
+            </button>
+            <input type="number" id="bpm-display" min="40" max="240" value="120" aria-label="Tempo en BPM" aria-live="polite">
+            <button class="stepper" id="bpm-up" type="button" aria-label="Subir tempo">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"></path></svg>
+            </button>
+          </div>
+          <div class="bpm-row countin-row">
+            <button class="stepper" id="countin-bars-down" type="button" aria-label="Menos compases de cuenta">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v2H5z"></path></svg>
+            </button>
+            <span class="countin-display" id="countin-bars-display" aria-label="Compases de cuenta" aria-live="polite">2 compases</span>
+            <button class="stepper" id="countin-bars-up" type="button" aria-label="Mas compases de cuenta">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"></path></svg>
+            </button>
+          </div>
+        </section>
+
+        <section class="module" aria-label="Atajos">
+          <span class="section-label">Atajos de teclado</span>
+          <div class="shortcuts">
+            <kbd>Espacio · Grabar loop</kbd>
+            <kbd>P · Play/Stop</kbd>
+            <kbd>B · Borrar</kbd>
+          </div>
+        </section>
       </div>
 
       <!-- Single recording track -->
@@ -1036,11 +1197,18 @@
               </div>
             </div>
             <div class="track-wave-empty" id="track2-wave-empty">Sin grabacion</div>
+            <div class="dropzone-overlay" id="track2-dropzone">Soltar archivo de audio aqui</div>
           </div>
           <div class="zoom-row track-zoom-row">
             <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
             <input type="range" id="track2-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda de la pista">
             <span class="readout" id="track2-zoom-readout">1.0x</span>
+            <button class="trim-undo-btn" id="track2-trim-undo" type="button" disabled title="Deshacer corte" aria-label="Deshacer corte">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"></path></svg>
+            </button>
+            <button class="trim-undo-btn" id="track2-trim-redo" type="button" disabled title="Rehacer corte" aria-label="Rehacer corte">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
+            </button>
           </div>
         </div>
       </section>
@@ -1051,47 +1219,21 @@
     <aside class="side-panel" aria-label="Ajustes">
       <div class="notice" id="mic-error" role="alert"></div>
 
-      <section class="module" aria-label="Volumen">
-        <span class="section-label">Volumen</span>
-        <div class="volume-row">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm11.5-.5v7a4 4 0 0 0 0-7zm2.8-2.8v12.6a7 7 0 0 0 0-12.6z"></path></svg>
-          <input type="range" id="volume" min="0" max="100" value="80" aria-label="Volumen del loop">
-          <span class="readout" id="vol-readout">80%</span>
-        </div>
-      </section>
-
-      <section class="module" aria-label="Metronomo">
-        <span class="section-label">Metronomo visual</span>
-        <div class="metro-top">
-          <button class="metro-toggle" id="metro-toggle" type="button" aria-pressed="false">Apagado</button>
-          <div class="beats" id="beat-lights" aria-hidden="true">
-            <span class="beat-light beat1"></span>
-            <span class="beat-light"></span>
-            <span class="beat-light"></span>
-            <span class="beat-light"></span>
+      <section class="module" aria-label="Entrada de audio">
+        <span class="section-label">Entrada de audio</span>
+        <select class="input-select" id="input-device" aria-label="Dispositivo de entrada">
+          <option value="">Entrada predeterminada</option>
+        </select>
+        <span class="input-hint">Elige tu interfaz (ej. UMC22) para grabar desde el canal conectado. Si la lista esta vacia, dale permiso al microfono y vuelve a abrir este menu.</span>
+        <div class="vu-wrap" aria-label="Nivel de entrada">
+          <span class="vu-label">Nivel de entrada</span>
+          <div class="vu-meter" id="vu-meter">
+            <div class="vu-fill" id="vu-fill"></div>
           </div>
         </div>
-        <div class="bpm-row">
-          <button class="stepper" id="bpm-down" type="button" aria-label="Bajar tempo">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v2H5z"></path></svg>
-          </button>
-          <input type="number" id="bpm-display" min="40" max="240" value="120" aria-label="Tempo en BPM" aria-live="polite">
-          <button class="stepper" id="bpm-up" type="button" aria-label="Subir tempo">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"></path></svg>
-          </button>
-        </div>
       </section>
 
-      <section class="module" aria-label="Atajos">
-        <span class="section-label">Atajos de teclado</span>
-        <div class="shortcuts">
-          <kbd>Espacio · Grabar loop</kbd>
-          <kbd>P · Play/Stop</kbd>
-          <kbd>B · Borrar</kbd>
-        </div>
-      </section>
-
-      <p class="footer-note">Grabacion inicia tras 2 compases de cuenta visual. Al detener, el loop entra automaticamente.</p>
+      <p class="footer-note" id="countin-note">Grabacion inicia tras 2 compases de cuenta visual. Al detener, el loop entra automaticamente.</p>
     </aside>
   </section>
 </main>
@@ -1122,6 +1264,8 @@ const state = {
   countInActive: false,
   countInTimer: null,
   countInBeat: 0,
+  countInBars: 2,
+  vuRAF: null,
   activeTarget: null,
   loopZoom: 1,
   tracks: {
@@ -1139,6 +1283,7 @@ const trackIds = ["track2"];
 
 /* ─── ELEMENTOS DOM ─── */
 const els = {
+  inputDevice: document.getElementById("input-device"),
   btnRecord:   document.getElementById("btn-record"),
   btnPlay:     document.getElementById("btn-play"),
   btnClear:    document.getElementById("btn-clear"),
@@ -1162,6 +1307,14 @@ const els = {
   bpmDown:     document.getElementById("bpm-down"),
   bpmUp:       document.getElementById("bpm-up"),
   beatLights:  document.querySelectorAll(".beat-light"),
+  vuFill:           document.getElementById("vu-fill"),
+  countinBarsDisplay: document.getElementById("countin-bars-display"),
+  countinBarsDown:    document.getElementById("countin-bars-down"),
+  countinBarsUp:      document.getElementById("countin-bars-up"),
+  countinNote:        document.getElementById("countin-note"),
+  loopTrimUndo: document.getElementById("loop-trim-undo"),
+  loopTrimRedo: document.getElementById("loop-trim-redo"),
+  loopDropzone: document.getElementById("loop-dropzone"),
   micError:    document.getElementById("mic-error"),
   emptyState:  document.getElementById("empty-state"),
   waveHint:    document.getElementById("wave-hint"),
@@ -1192,6 +1345,9 @@ trackIds.forEach(id => {
     zoomframe:   document.getElementById(`${id}-zoomframe`),
     zoom:        document.getElementById(`${id}-zoom`),
     zoomReadout: document.getElementById(`${id}-zoom-readout`),
+    trimUndo:    document.getElementById(`${id}-trim-undo`),
+    trimRedo:    document.getElementById(`${id}-trim-redo`),
+    dropzone:    document.getElementById(`${id}-dropzone`),
   };
 });
 
@@ -1238,7 +1394,11 @@ async function initAudio() {
   if (!state.audioCtx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) { showMicError("Este navegador no soporta Web Audio."); return false; }
-    state.audioCtx = new AC();
+    try {
+      state.audioCtx = new AC({ sampleRate: 48000 });
+    } catch (e) {
+      state.audioCtx = new AC();
+    }
     state.gainNode = state.audioCtx.createGain();
     state.gainNode.gain.value = Number(els.volume.value) / 100;
     state.gainNode.connect(state.audioCtx.destination);
@@ -1257,23 +1417,117 @@ function isAnyTrackRecording() {
   return trackIds.some(id => state.tracks[id].isRecording);
 }
 
-/* ─── MICRÓFONO ─── */
-// Intenta obtener el microfono sin bloquear en file:// usando constraints permisivos
+/* ─── MICRÓFONO / ENTRADA DE AUDIO ─── */
+// Intenta obtener el audio sin bloquear en file:// usando constraints permisivos
 async function getMic() {
+  const chosenId = els.inputDevice ? els.inputDevice.value : "";
+  const baseAudioConstraints = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
   const constraints = {
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    audio: chosenId
+      ? { ...baseAudioConstraints, deviceId: { exact: chosenId } }
+      : baseAudioConstraints,
     video: false
   };
   try {
-    return await navigator.mediaDevices.getUserMedia(constraints);
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    await populateInputDevices(); // refrescar etiquetas ahora que ya hay permiso
+    return stream;
   } catch (err) {
-    // Si falla por seguridad en file://, intentar con constraints minimas
+    // Si el deviceId exacto ya no es valido, o falla por seguridad en file://, reintentar con constraints minimas
     try {
-      return await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      await populateInputDevices();
+      return stream;
     } catch (err2) {
       throw err2;
     }
   }
+}
+
+// Llena el selector de entrada con los dispositivos de audio disponibles
+async function populateInputDevices() {
+  if (!els.inputDevice || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const inputs = devices.filter(d => d.kind === "audioinput");
+    const previousValue = els.inputDevice.value;
+    els.inputDevice.innerHTML = "";
+
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = "Entrada predeterminada";
+    els.inputDevice.appendChild(defaultOpt);
+
+    inputs.forEach((d, i) => {
+      const opt = document.createElement("option");
+      opt.value = d.deviceId;
+      opt.textContent = d.label || `Entrada de audio ${i + 1}`;
+      els.inputDevice.appendChild(opt);
+    });
+
+    const savedId = localStorage.getItem("ayun-input-device-id");
+    if (savedId && inputs.some(d => d.deviceId === savedId)) {
+      els.inputDevice.value = savedId;
+    } else if (previousValue && inputs.some(d => d.deviceId === previousValue)) {
+      els.inputDevice.value = previousValue;
+    }
+  } catch (e) {
+    // enumerateDevices puede fallar sin permiso previo; se reintenta luego de getUserMedia
+  }
+}
+
+if (els.inputDevice) {
+  els.inputDevice.addEventListener("change", () => {
+    try { localStorage.setItem("ayun-input-device-id", els.inputDevice.value); } catch (e) {}
+  });
+  populateInputDevices();
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+    navigator.mediaDevices.addEventListener("devicechange", populateInputDevices);
+  }
+}
+
+/* ─── VU METER (nivel de entrada) ─── */
+function getActiveAnalyser() {
+  if (state.activeTarget === "main" && state.analyser) return state.analyser;
+  if (state.activeTarget && state.tracks[state.activeTarget] && state.tracks[state.activeTarget].analyser) {
+    return state.tracks[state.activeTarget].analyser;
+  }
+  return null;
+}
+
+function startVUMeter() {
+  cancelAnimationFrame(state.vuRAF);
+  function loop() {
+    const stillActive = state.countInActive || state.isRecording || isAnyTrackRecording();
+    const analyser = getActiveAnalyser();
+    if (analyser) {
+      const buf = new Uint8Array(analyser.fftSize);
+      analyser.getByteTimeDomainData(buf);
+      let sumSquares = 0;
+      for (let i = 0; i < buf.length; i++) {
+        const v = (buf[i] - 128) / 128;
+        sumSquares += v * v;
+      }
+      const rms = Math.sqrt(sumSquares / buf.length);
+      const pct = Math.max(0, Math.min(100, Math.round(rms * 220)));
+      if (els.vuFill) els.vuFill.style.width = pct + "%";
+    } else if (els.vuFill) {
+      els.vuFill.style.width = "0%";
+    }
+    if (!stillActive) {
+      state.vuRAF = null;
+      if (els.vuFill) els.vuFill.style.width = "0%";
+      return;
+    }
+    state.vuRAF = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+function stopVUMeter() {
+  cancelAnimationFrame(state.vuRAF);
+  state.vuRAF = null;
+  if (els.vuFill) els.vuFill.style.width = "0%";
 }
 
 /* ─── LOOP RECORDING ─── */
@@ -1318,6 +1572,7 @@ async function startRecording() {
 function stopRecording() {
   if (state.countInActive) {
     cancelCountIn();
+    stopVUMeter();
     state.mediaStream?.getTracks().forEach(t => t.stop());
     state.mediaStream = null; state.mediaRecorder = null;
     state.analyser = null; state.activeTarget = null;
@@ -1330,6 +1585,7 @@ function stopRecording() {
   state.mediaStream = null;
   state.isRecording = false;
   state.activeTarget = null;
+  stopVUMeter();
   cancelAnimationFrame(state.waveformRAF);
 }
 
@@ -1353,6 +1609,7 @@ async function handleRecordingStop() {
   drawWaveform();
   // reset trim and show handles
   state.loopTrim.startRatio = 0; state.loopTrim.endRatio = 1; state.loopTrim.originalBuffer = null;
+  resetTrimHistory("loop");
   showTrimHandles("loop");
   setStatus("ready");
   startPlayback();
@@ -1405,6 +1662,7 @@ function stopTrackRecording(id) {
   const track = state.tracks[id];
   if (state.countInActive && state.activeTarget === id) {
     cancelCountIn();
+    stopVUMeter();
     state.mediaStream?.getTracks().forEach(t => t.stop());
     state.mediaStream = null; state.mediaRecorder = null;
     track.analyser = null; state.activeTarget = null;
@@ -1418,6 +1676,7 @@ function stopTrackRecording(id) {
   state.mediaStream = null;
   track.isRecording = false;
   state.activeTarget = null;
+  stopVUMeter();
 }
 
 async function handleTrackStop(id) {
@@ -1440,6 +1699,7 @@ async function handleTrackStop(id) {
   drawTrackWaveform(id);
   // reset trim and show handles
   track.trim.startRatio = 0; track.trim.endRatio = 1; track.trim.originalBuffer = null;
+  resetTrimHistory(id);
   showTrimHandles(id);
   saveTrack(id);
   setTrackStatus(id, "ready");
@@ -1478,6 +1738,7 @@ function clearTrack(id) {
   track.buffer = null; track.chunks = []; track.dataUrl = "";
   track.duration = 0; track.waveformData = [];
   track.trim.startRatio = 0; track.trim.endRatio = 1; track.trim.originalBuffer = null;
+  resetTrimHistory(id);
   hideTrimHandles(id);
   updateTrimUI(id);
   localStorage.removeItem(storageKey(id));
@@ -1520,6 +1781,7 @@ function clearLoop() {
   els.btnDownload.disabled = true;
   hideTrimHandles("loop");
   state.loopTrim.startRatio = 0; state.loopTrim.endRatio = 1; state.loopTrim.originalBuffer = null;
+  resetTrimHistory("loop");
   updateTrimUI("loop");
   drawWaveform();
   setStatus("idle");
@@ -1729,9 +1991,9 @@ trackIds.forEach(id => {
 
 /* ─── TRIM SYSTEM ─── */
 
-// trim state: { startRatio: 0..1, endRatio: 0..1, originalBuffer, dragging: null }
-state.loopTrim = { startRatio: 0, endRatio: 1, originalBuffer: null };
-state.tracks.track2.trim = { startRatio: 0, endRatio: 1, originalBuffer: null };
+// trim state: { startRatio: 0..1, endRatio: 0..1, originalBuffer, dragging: null, history: [...], historyIndex }
+state.loopTrim = { startRatio: 0, endRatio: 1, originalBuffer: null, history: [{ startRatio: 0, endRatio: 1 }], historyIndex: 0 };
+state.tracks.track2.trim = { startRatio: 0, endRatio: 1, originalBuffer: null, history: [{ startRatio: 0, endRatio: 1 }], historyIndex: 0 };
 
 function showTrimHandles(which) {
   if (which === "loop") {
@@ -1898,7 +2160,103 @@ function applyTrim(which) {
     updateTrimUI(which);
     setTrackStatus(which, "ready");
   }
+
+  pushTrimHistory(which);
 }
+
+/* ─── UNDO / REDO DE TRIM ─── */
+function pushTrimHistory(which) {
+  const trim = which === "loop" ? state.loopTrim : state.tracks[which].trim;
+  if (!trim.history) { trim.history = [{ startRatio: 0, endRatio: 1 }]; trim.historyIndex = 0; }
+  // descartar el futuro "rehacer" si veniamos de un undo
+  trim.history = trim.history.slice(0, trim.historyIndex + 1);
+  trim.history.push({ startRatio: trim.startRatio, endRatio: trim.endRatio });
+  trim.historyIndex = trim.history.length - 1;
+  updateTrimUndoRedoButtons(which);
+}
+
+function resetTrimHistory(which) {
+  const trim = which === "loop" ? state.loopTrim : state.tracks[which].trim;
+  trim.history = [{ startRatio: 0, endRatio: 1 }];
+  trim.historyIndex = 0;
+  updateTrimUndoRedoButtons(which);
+}
+
+function updateTrimUndoRedoButtons(which) {
+  const trim = which === "loop" ? state.loopTrim : state.tracks[which].trim;
+  const undoBtn = which === "loop" ? els.loopTrimUndo : tracksEls[which].trimUndo;
+  const redoBtn = which === "loop" ? els.loopTrimRedo : tracksEls[which].trimRedo;
+  if (!trim.history) return;
+  if (undoBtn) undoBtn.disabled = trim.historyIndex <= 0;
+  if (redoBtn) redoBtn.disabled = trim.historyIndex >= trim.history.length - 1;
+}
+
+function applyTrimFromHistory(which) {
+  const isLoop = which === "loop";
+  const trim = isLoop ? state.loopTrim : state.tracks[which].trim;
+  const entry = trim.history[trim.historyIndex];
+  trim.startRatio = entry.startRatio;
+  trim.endRatio   = entry.endRatio;
+
+  const orig = trim.originalBuffer
+    || (isLoop ? state.loopBuffer : state.tracks[which].buffer);
+  if (!orig) { updateTrimUndoRedoButtons(which); return; }
+
+  const sampleRate   = orig.sampleRate;
+  const numChannels  = orig.numberOfChannels;
+  const totalSamples = orig.length;
+  const startSample  = Math.floor(trim.startRatio * totalSamples);
+  const endSample    = Math.floor(trim.endRatio   * totalSamples);
+  const newLength    = Math.max(1, endSample - startSample);
+
+  const newBuf = state.audioCtx.createBuffer(numChannels, newLength, sampleRate);
+  for (let ch = 0; ch < numChannels; ch++) {
+    const src = orig.getChannelData(ch);
+    const dst = newBuf.getChannelData(ch);
+    for (let i = 0; i < newLength; i++) dst[i] = src[startSample + i];
+  }
+
+  if (isLoop) {
+    const wasPlaying = state.isPlaying;
+    if (wasPlaying) stopPlayback();
+    state.loopBuffer   = newBuf;
+    state.loopDuration = newBuf.duration;
+    els.durationVal.textContent = newBuf.duration.toFixed(1);
+    buildWaveformData();
+    drawWaveform();
+    updateTrimUI("loop");
+    if (wasPlaying) startPlayback();
+  } else {
+    const wasPlaying = state.tracks[which].isPlaying;
+    if (wasPlaying) stopTrackPlayback(which);
+    state.tracks[which].buffer   = newBuf;
+    state.tracks[which].duration = newBuf.duration;
+    buildTrackWaveformData(which);
+    drawTrackWaveform(which);
+    updateTrimUI(which);
+    setTrackStatus(which, "ready");
+  }
+  updateTrimUndoRedoButtons(which);
+}
+
+function undoTrim(which) {
+  const trim = which === "loop" ? state.loopTrim : state.tracks[which].trim;
+  if (!trim.history || trim.historyIndex <= 0) return;
+  trim.historyIndex -= 1;
+  applyTrimFromHistory(which);
+}
+
+function redoTrim(which) {
+  const trim = which === "loop" ? state.loopTrim : state.tracks[which].trim;
+  if (!trim.history || trim.historyIndex >= trim.history.length - 1) return;
+  trim.historyIndex += 1;
+  applyTrimFromHistory(which);
+}
+
+els.loopTrimUndo?.addEventListener("click", () => undoTrim("loop"));
+els.loopTrimRedo?.addEventListener("click", () => redoTrim("loop"));
+tracksEls.track2.trimUndo?.addEventListener("click", () => undoTrim("track2"));
+tracksEls.track2.trimRedo?.addEventListener("click", () => redoTrim("track2"));
 
 function resetTrim(which) {
   const trim = which === "loop" ? state.loopTrim : state.tracks[which].trim;
@@ -1920,6 +2278,7 @@ function resetTrim(which) {
     }
     trim.originalBuffer = null;
   }
+  resetTrimHistory(which);
   updateTrimUI(which);
 }
 
@@ -1933,12 +2292,14 @@ function startCountIn(onComplete) {
   state.countInActive = true;
   state.countInBeat = 0;
   setStatus("countin");
+  startVUMeter();
+  const totalBeats = state.countInBars * 4;
   const interval = (60 / state.bpm) * 1000;
   function tick() {
     if (!state.countInActive) return;
     els.beatLights.forEach((l, i) => l.classList.toggle("active", i === state.countInBeat % 4));
     state.countInBeat += 1;
-    if (state.countInBeat >= 8) {
+    if (state.countInBeat >= totalBeats) {
       state.countInTimer = setTimeout(() => {
         if (!state.countInActive) return;
         state.countInActive = false; state.countInTimer = null;
@@ -1971,7 +2332,7 @@ function setStatus(mode) {
     els.statusText.textContent = "Cuenta de entrada";
     els.recLabel.textContent = "Cancelar";
     els.btnPlay.disabled = true; els.btnClear.disabled = true;
-    els.waveHint.textContent = "Cuenta visual de 2 compases.";
+    els.waveHint.textContent = `Cuenta visual de ${state.countInBars} compas${state.countInBars === 1 ? "" : "es"}.`;
     return;
   }
   if (mode === "recording") {
@@ -2016,7 +2377,7 @@ function setTrackStatus(id, mode) {
   e.playIcon.innerHTML = mode === "playing" ? stopIcon : playIcon;
 
   if (mode === "countin") {
-    e.status.textContent = "Cuenta 2 compases";
+    e.status.textContent = `Cuenta ${state.countInBars} compas${state.countInBars === 1 ? "" : "es"}`;
     e.recLabel.textContent = "Cancelar";
     e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; return;
   }
@@ -2244,6 +2605,7 @@ async function loadTrack(id) {
     buildTrackWaveformData(id);
     drawTrackWaveform(id);
     track.trim.startRatio = 0; track.trim.endRatio = 1; track.trim.originalBuffer = null;
+  resetTrimHistory(id);
     showTrimHandles(id);
     setTrackStatus(id, "ready");
   } catch {
@@ -2268,6 +2630,90 @@ function dataUrlToArrayBuffer(dataUrl) {
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes.buffer;
 }
+
+/* ─── DRAG & DROP DE ARCHIVOS DE AUDIO ─── */
+async function loadAudioFileInto(which, file) {
+  if (!file) return;
+  if (!file.type.startsWith("audio/")) {
+    showMicError("Solo se pueden soltar archivos de audio (mp3, wav, m4a, etc).");
+    return;
+  }
+  if (state.countInActive || state.isRecording || isAnyTrackRecording()) {
+    showMicError("Deten la grabacion antes de cargar un archivo.");
+    return;
+  }
+  if (!(await initAudio())) return;
+
+  let buf;
+  try {
+    const ab = await file.arrayBuffer();
+    buf = await state.audioCtx.decodeAudioData(ab.slice(0));
+  } catch (e) {
+    showMicError("No se pudo leer ese archivo de audio.");
+    return;
+  }
+  hideMicError();
+
+  if (which === "loop") {
+    const wasPlaying = state.isPlaying;
+    if (wasPlaying) stopPlayback();
+    state.loopBuffer = buf;
+    state.loopBlob = file;
+    state.loopDuration = buf.duration;
+    els.durationVal.textContent = buf.duration.toFixed(1);
+    buildWaveformData();
+    drawWaveform();
+    state.loopTrim.startRatio = 0; state.loopTrim.endRatio = 1; state.loopTrim.originalBuffer = null;
+    resetTrimHistory("loop");
+    showTrimHandles("loop");
+    els.btnPlay.disabled = false;
+    els.btnClear.disabled = false;
+    els.btnDownload.disabled = false;
+    setStatus("ready");
+  } else {
+    const track = state.tracks[which];
+    const wasPlaying = track.isPlaying;
+    if (wasPlaying) stopTrackPlayback(which);
+    track.buffer = buf;
+    track.duration = buf.duration;
+    try { track.dataUrl = await blobToDataUrl(file); } catch (e) { track.dataUrl = ""; }
+    buildTrackWaveformData(which);
+    drawTrackWaveform(which);
+    track.trim.startRatio = 0; track.trim.endRatio = 1; track.trim.originalBuffer = null;
+    resetTrimHistory(which);
+    showTrimHandles(which);
+    if (track.dataUrl) saveTrack(which);
+    setTrackStatus(which, "ready");
+  }
+}
+
+function setupDropzone(dropTargetEl, overlayEl, which) {
+  if (!dropTargetEl || !overlayEl) return;
+  let dragCounter = 0;
+
+  dropTargetEl.addEventListener("dragover", e => { e.preventDefault(); });
+  dropTargetEl.addEventListener("dragenter", e => {
+    e.preventDefault();
+    if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes("Files")) return;
+    dragCounter++;
+    overlayEl.classList.add("show");
+  });
+  dropTargetEl.addEventListener("dragleave", e => {
+    e.preventDefault();
+    dragCounter = Math.max(0, dragCounter - 1);
+    if (dragCounter === 0) overlayEl.classList.remove("show");
+  });
+  dropTargetEl.addEventListener("drop", e => {
+    e.preventDefault();
+    dragCounter = 0;
+    overlayEl.classList.remove("show");
+    const file = e.dataTransfer?.files?.[0];
+    if (file) loadAudioFileInto(which, file);
+  });
+}
+
+setupDropzone(els.waveViewport, els.loopDropzone, "loop");
+setupDropzone(tracksEls.track2.viewport, tracksEls.track2.dropzone, "track2");
 
 /* ─── EVENT LISTENERS ─── */
 els.btnRecord.addEventListener("click", async () => {
@@ -2385,6 +2831,22 @@ els.metroToggle.addEventListener("click", () => {
 
 els.bpmDown.addEventListener("click", () => { state.bpm = Math.max(40, state.bpm - 1); updateBpm(); });
 els.bpmUp.addEventListener("click",   () => { state.bpm = Math.min(240, state.bpm + 1); updateBpm(); });
+
+function updateCountInBars() {
+  els.countinBarsDisplay.textContent = `${state.countInBars} compas${state.countInBars === 1 ? "" : "es"}`;
+  if (els.countinNote) {
+    els.countinNote.textContent = `Grabacion inicia tras ${state.countInBars} compas${state.countInBars === 1 ? "" : "es"} de cuenta visual. Al detener, el loop entra automaticamente.`;
+  }
+}
+els.countinBarsDown.addEventListener("click", () => {
+  state.countInBars = Math.max(1, state.countInBars - 1);
+  updateCountInBars();
+});
+els.countinBarsUp.addEventListener("click", () => {
+  state.countInBars = Math.min(4, state.countInBars + 1);
+  updateCountInBars();
+});
+updateCountInBars();
 
 els.bpmDisplay.addEventListener("input", () => {
   const v = parseInt(els.bpmDisplay.value, 10);
