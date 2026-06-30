@@ -635,7 +635,20 @@
 
   /* ── TRIM HANDLES ── */
   .wave-wrap,
-  .track-wave-wrap { overflow: visible; } /* allow handles to be visible at edges */
+  .track-wave-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .wave-zoomframe,
+  .track-wave-zoomframe {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    min-width: 100%;
+  }
 
   .trim-handle {
     position: absolute;
@@ -677,15 +690,11 @@
     box-shadow: 0 0 10px rgba(240,179,90,.5);
   }
 
-  .trim-handle.start { left: 0; transform: translateX(-50%); }
-  .trim-handle.end   { right: 0; transform: translateX(50%); }
+  /* keep handles fully inside the scrollable content instead of centering on the edge */
+  .trim-handle.start { left: 0; transform: translateX(0); }
+  .trim-handle.end   { right: 0; transform: translateX(-100%); }
 
   .trim-handle.hidden { display: none; }
-
-  /* track-wave-wrap sits flush against .track-card, which clips overflow,
-     so keep its handles fully inside the bounds instead of centering on the edge */
-  .track-wave-wrap .trim-handle.start { transform: translateX(0); }
-  .track-wave-wrap .trim-handle.end   { transform: translateX(-100%); }
 
   /* dimmed regions outside trim */
   .trim-shade {
@@ -727,6 +736,41 @@
   }
 
   .trim-badge.visible { opacity: 1; }
+
+  /* ── ZOOM CONTROL ── */
+  .zoom-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .zoom-icon {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    fill: var(--soft);
+  }
+
+  .zoom-row input[type="range"] {
+    flex: 1;
+  }
+
+  .zoom-row input[type="range"]:disabled {
+    opacity: .35;
+  }
+
+  .zoom-row .readout {
+    flex: none;
+    min-width: 34px;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--soft);
+  }
+
+  .track-zoom-row {
+    padding: 0 13px 13px;
+  }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinning { animation: spin .8s linear infinite; }
@@ -898,17 +942,24 @@
           </div>
           <span class="hint" id="wave-hint">Prepara tu instrumento y pulsa grabar.</span>
         </div>
-        <div class="wave-wrap">
-          <canvas id="waveform"></canvas>
+        <div class="wave-wrap" id="wave-viewport">
+          <div class="wave-zoomframe" id="wave-zoomframe">
+            <canvas id="waveform"></canvas>
+            <div class="trim-shade" id="loop-shade-start" style="left:0;width:0"></div>
+            <div class="trim-shade" id="loop-shade-end"   style="right:0;width:0"></div>
+            <div class="trim-handle start hidden" id="loop-handle-start">
+              <div class="trim-badge" id="loop-badge-start"></div>
+            </div>
+            <div class="trim-handle end hidden" id="loop-handle-end">
+              <div class="trim-badge" id="loop-badge-end"></div>
+            </div>
+          </div>
           <div class="empty-state" id="empty-state">El loop aparecera aqui cuando termines la primera toma.</div>
-          <div class="trim-shade" id="loop-shade-start" style="left:0;width:0"></div>
-          <div class="trim-shade" id="loop-shade-end"   style="right:0;width:0"></div>
-          <div class="trim-handle start hidden" id="loop-handle-start">
-            <div class="trim-badge" id="loop-badge-start"></div>
-          </div>
-          <div class="trim-handle end hidden" id="loop-handle-end">
-            <div class="trim-badge" id="loop-badge-end"></div>
-          </div>
+        </div>
+        <div class="zoom-row">
+          <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
+          <input type="range" id="loop-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda del loop">
+          <span class="readout" id="loop-zoom-readout">1.0x</span>
         </div>
         <div class="timeline" aria-hidden="true">
           <div id="playhead"></div>
@@ -972,17 +1023,24 @@
             </div>
           </div>
           <!-- Track mini waveform -->
-          <div class="track-wave-wrap">
-            <canvas id="track2-canvas"></canvas>
+          <div class="track-wave-wrap" id="track2-viewport">
+            <div class="track-wave-zoomframe" id="track2-zoomframe">
+              <canvas id="track2-canvas"></canvas>
+              <div class="trim-shade" id="track2-shade-start" style="left:0;width:0"></div>
+              <div class="trim-shade" id="track2-shade-end"   style="right:0;width:0"></div>
+              <div class="trim-handle start hidden" id="track2-handle-start">
+                <div class="trim-badge" id="track2-badge-start"></div>
+              </div>
+              <div class="trim-handle end hidden" id="track2-handle-end">
+                <div class="trim-badge" id="track2-badge-end"></div>
+              </div>
+            </div>
             <div class="track-wave-empty" id="track2-wave-empty">Sin grabacion</div>
-            <div class="trim-shade" id="track2-shade-start" style="left:0;width:0"></div>
-            <div class="trim-shade" id="track2-shade-end"   style="right:0;width:0"></div>
-            <div class="trim-handle start hidden" id="track2-handle-start">
-              <div class="trim-badge" id="track2-badge-start"></div>
-            </div>
-            <div class="trim-handle end hidden" id="track2-handle-end">
-              <div class="trim-badge" id="track2-badge-end"></div>
-            </div>
+          </div>
+          <div class="zoom-row track-zoom-row">
+            <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
+            <input type="range" id="track2-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda de la pista">
+            <span class="readout" id="track2-zoom-readout">1.0x</span>
           </div>
         </div>
       </section>
@@ -1065,12 +1123,14 @@ const state = {
   countInTimer: null,
   countInBeat: 0,
   activeTarget: null,
+  loopZoom: 1,
   tracks: {
     track2: {
       buffer: null, sourceNode: null, chunks: [],
       dataUrl: "", duration: 0, name: "",
       isRecording: false, isPlaying: false, startTime: 0,
-      waveformData: [], analyser: null, liveRAF: null
+      waveformData: [], analyser: null, liveRAF: null,
+      zoom: 1
     }
   }
 };
@@ -1106,6 +1166,10 @@ const els = {
   emptyState:  document.getElementById("empty-state"),
   waveHint:    document.getElementById("wave-hint"),
   loopName:    document.getElementById("loop-name"),
+  waveViewport:  document.getElementById("wave-viewport"),
+  waveZoomframe: document.getElementById("wave-zoomframe"),
+  waveZoom:        document.getElementById("loop-zoom"),
+  waveZoomReadout: document.getElementById("loop-zoom-readout"),
 };
 
 const tracksEls = {};
@@ -1124,6 +1188,10 @@ trackIds.forEach(id => {
     waveEmpty:  document.getElementById(`${id}-wave-empty`),
     download:   document.getElementById(`${id}-download`),
     dlIcon:     document.getElementById(`${id}-dl-icon`),
+    viewport:    document.getElementById(`${id}-viewport`),
+    zoomframe:   document.getElementById(`${id}-zoomframe`),
+    zoom:        document.getElementById(`${id}-zoom`),
+    zoomReadout: document.getElementById(`${id}-zoom-readout`),
   };
 });
 
@@ -1603,6 +1671,62 @@ function startTrackLiveWaveform(id) {
   tick();
 }
 
+/* ─── ZOOM SYSTEM ─── */
+// Stretches the waveform's inner frame wider than its viewport so the
+// wrap becomes horizontally scrollable, allowing more precise trim dragging.
+function applyZoom(which, level) {
+  const isLoop = which === "loop";
+  const frame    = isLoop ? els.waveZoomframe : tracksEls[which].zoomframe;
+  const viewport = isLoop ? els.waveViewport  : tracksEls[which].viewport;
+  if (!frame || !viewport) return;
+
+  const prevWidth   = frame.getBoundingClientRect().width || 1;
+  const prevScroll  = viewport.scrollLeft;
+  // ratio of the visible left edge within the old content width
+  const anchorRatio = prevWidth ? prevScroll / prevWidth : 0;
+
+  frame.style.width = (level * 100) + "%";
+  resizeCanvas();
+  updateTrimUI(which);
+
+  // keep roughly the same horizontal scroll position after resizing
+  const newWidth = frame.getBoundingClientRect().width || 1;
+  viewport.scrollLeft = anchorRatio * newWidth;
+}
+
+function resetZoom(which) {
+  const isLoop = which === "loop";
+  const zoomInput    = isLoop ? els.waveZoom        : tracksEls[which].zoom;
+  const zoomReadout  = isLoop ? els.waveZoomReadout : tracksEls[which].zoomReadout;
+  if (isLoop) state.loopZoom = 1; else state.tracks[which].zoom = 1;
+  if (zoomInput) zoomInput.value = 1;
+  if (zoomReadout) zoomReadout.textContent = "1.0x";
+  applyZoom(which, 1);
+}
+
+function setZoomEnabled(which, enabled) {
+  const zoomInput = which === "loop" ? els.waveZoom : tracksEls[which].zoom;
+  if (zoomInput) zoomInput.disabled = !enabled;
+}
+
+els.waveZoom.addEventListener("input", () => {
+  const level = parseFloat(els.waveZoom.value);
+  state.loopZoom = level;
+  els.waveZoomReadout.textContent = level.toFixed(1) + "x";
+  applyZoom("loop", level);
+});
+
+trackIds.forEach(id => {
+  const zoomInput = tracksEls[id].zoom;
+  if (!zoomInput) return;
+  zoomInput.addEventListener("input", () => {
+    const level = parseFloat(zoomInput.value);
+    state.tracks[id].zoom = level;
+    tracksEls[id].zoomReadout.textContent = level.toFixed(1) + "x";
+    applyZoom(id, level);
+  });
+});
+
 /* ─── TRIM SYSTEM ─── */
 
 // trim state: { startRatio: 0..1, endRatio: 0..1, originalBuffer, dragging: null }
@@ -1619,6 +1743,7 @@ function showTrimHandles(which) {
     document.getElementById(`${which}-handle-end`).classList.remove("hidden");
     updateTrimUI(which);
   }
+  setZoomEnabled(which, true);
 }
 
 function hideTrimHandles(which) {
@@ -1627,6 +1752,8 @@ function hideTrimHandles(which) {
     if (el) el.classList.add("hidden");
   });
   updateTrimUI(which);
+  resetZoom(which);
+  setZoomEnabled(which, false);
 }
 
 function updateTrimUI(which) {
