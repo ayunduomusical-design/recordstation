@@ -272,7 +272,7 @@
   /* ── TRANSPORT ── */
   .transport {
     display: grid;
-    grid-template-columns: minmax(140px,1fr) minmax(130px,.8fr) 44px 44px;
+    grid-template-columns: minmax(140px,1fr) minmax(130px,.8fr) 44px 44px 44px;
     gap: 8px;
   }
 
@@ -358,9 +358,27 @@
 
   .track-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr 36px 36px;
+    grid-template-columns: 1fr 1fr 36px 36px 36px;
     gap: 7px;
   }
+
+  .track-mic-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .track-mic-label {
+    color: var(--soft);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .track-mic-row .input-select { flex: 1; min-height: 32px; }
 
   /* ── BUTTONS ── */
   .btn {
@@ -559,6 +577,24 @@
     box-shadow: 0 0 12px rgba(255,107,95,.7);
   }
   .channel-status { display: block; margin-top: 2px; }
+
+  /* ── OSCILOSCOPIO / ESPECTRO ── */
+  .scope-wrap { display: grid; gap: 5px; margin-top: 8px; }
+  .scope-label {
+    color: var(--soft);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .scope-canvas {
+    width: 100%;
+    height: 64px;
+    display: block;
+    background: #0e0d0b;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
 
   /* ── MID MODULES (entre loop y pista de grabacion) ── */
   .mid-modules {
@@ -1123,7 +1159,8 @@
     .topbar { align-items: flex-start; flex-direction: column; }
     .session-pill { width: 100%; justify-content: space-between; border-radius: var(--radius); }
     .meter-row, .side-panel { grid-template-columns: 1fr; }
-    .transport { grid-template-columns: 1fr 1fr 44px 44px; }
+    .transport { grid-template-columns: 1fr 1fr 44px 44px 44px; }
+    .track-actions { grid-template-columns: 1fr 1fr 36px 36px 36px; }
   }
 </style>
 </head>
@@ -1232,7 +1269,7 @@
         <button class="btn btn-play-todo" id="btn-play-todo" type="button" disabled>
           <svg class="todo-icon" viewBox="0 0 24 24" aria-hidden="true" id="play-todo-icon"><path d="M8 5v14l11-7z"/></svg>
           <span class="todo-text">
-            <span class="todo-title" id="play-todo-label">Play Loop + Pista</span>
+            <span class="todo-title" id="play-todo-label">Play Loop + Pistas</span>
             <span class="todo-sub" id="play-todo-sub">Inician juntos al mismo tiempo</span>
           </span>
         </button>
@@ -1250,6 +1287,9 @@
         </button>
         <button class="btn icon-btn btn-download" id="btn-download" type="button" disabled title="Descargar loop como MP3" aria-label="Descargar MP3">
           <svg class="icon" id="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
+        </button>
+        <button class="btn icon-btn btn-download" id="btn-download-wav" type="button" disabled title="Descargar loop como WAV (alta calidad)" aria-label="Descargar WAV">
+          <svg class="icon" id="dl-wav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
         </button>
         <button class="btn icon-btn" id="btn-clear" type="button" disabled aria-label="Borrar loop" title="Borrar loop">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
@@ -1308,80 +1348,178 @@
         </section>
       </div>
 
-      <!-- Single recording track -->
-      <section aria-label="Pista de grabacion">
-        <span class="section-label" style="display:block;margin-bottom:10px;">Pista de grabacion</span>
-        <div class="track-card">
-          <div class="track-card-inner">
-            <div class="track-head">
-              <input type="text" class="track-name-input" id="track2-name" value="Pista 1" maxlength="40" aria-label="Nombre de la pista">
-              <span class="track-status" id="track2-status">Vacia</span>
+      <!-- Pistas de grabacion (2), cada una con su propio microfono de entrada -->
+      <section aria-label="Pistas de grabacion">
+        <span class="section-label" style="display:block;margin-bottom:10px;">Pistas de grabacion</span>
+        <div class="tracks-stack" style="display:grid;gap:14px;">
+          <!-- Pista 1 -->
+          <div class="track-card">
+            <div class="track-card-inner">
+              <div class="track-head">
+                <input type="text" class="track-name-input" id="track1-name" value="Pista 1" maxlength="40" aria-label="Nombre de la pista">
+                <span class="track-status" id="track1-status">Vacia</span>
+              </div>
+              <div class="track-mic-row">
+                <span class="track-mic-label">Microfono</span>
+                <select class="input-select" id="track1-mic-device" aria-label="Microfono de la Pista 1">
+                  <option value="">Entrada predeterminada</option>
+                </select>
+              </div>
+              <div class="track-actions">
+                <button class="btn btn-main" id="track1-record" type="button">
+                  <svg class="icon" id="track1-rec-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle></svg>
+                  <span id="track1-rec-label">Grabar</span>
+                </button>
+                <button class="btn btn-secondary" id="track1-play" type="button" disabled>
+                  <svg class="icon" id="track1-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+                  <span id="track1-play-label">Play</span>
+                </button>
+                <button class="btn icon-btn btn-download" id="track1-download" type="button" disabled aria-label="Descargar pista como MP3" title="Descargar MP3">
+                  <svg class="icon" id="track1-dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
+                </button>
+                <button class="btn icon-btn btn-download" id="track1-download-wav" type="button" disabled aria-label="Descargar pista como WAV" title="Descargar WAV (alta calidad)">
+                  <svg class="icon" id="track1-dl-wav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
+                </button>
+                <button class="btn icon-btn" id="track1-clear" type="button" disabled aria-label="Borrar pista" title="Borrar pista">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
+                </button>
+              </div>
             </div>
-            <div class="track-actions">
-              <button class="btn btn-main" id="track2-record" type="button">
-                <svg class="icon" id="track2-rec-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle></svg>
-                <span id="track2-rec-label">Grabar</span>
+            <!-- Track mini waveform -->
+            <div class="track-wave-wrap" id="track1-viewport">
+              <div class="track-wave-zoomframe" id="track1-zoomframe">
+                <canvas id="track1-canvas"></canvas>
+                <div class="trim-shade" id="track1-shade-start" style="left:0;width:0"></div>
+                <div class="trim-shade" id="track1-shade-end"   style="right:0;width:0"></div>
+                <div class="trim-handle start hidden" id="track1-handle-start">
+                  <div class="trim-badge" id="track1-badge-start"></div>
+                </div>
+                <div class="trim-handle end hidden" id="track1-handle-end">
+                  <div class="trim-badge" id="track1-badge-end"></div>
+                </div>
+                <div class="seek-strip" id="track1-seek-strip"></div>
+                <div class="seek-cursor" id="track1-seek-cursor" style="left:0"></div>
+                <div class="seek-badge" id="track1-seek-badge">0.000s</div>
+              </div>
+              <div class="track-wave-empty" id="track1-wave-empty">Sin grabacion</div>
+              <div class="dropzone-overlay" id="track1-dropzone">Soltar archivo de audio aqui</div>
+            </div>
+            <div class="zoom-row track-zoom-row">
+              <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
+              <input type="range" id="track1-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda de la pista">
+              <span class="readout" id="track1-zoom-readout">1.0x</span>
+              <button class="trim-undo-btn" id="track1-trim-undo" type="button" disabled title="Deshacer corte" aria-label="Deshacer corte">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"></path></svg>
               </button>
-              <button class="btn btn-secondary" id="track2-play" type="button" disabled>
-                <svg class="icon" id="track2-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
-                <span id="track2-play-label">Play</span>
+              <button class="trim-undo-btn" id="track1-trim-redo" type="button" disabled title="Rehacer corte" aria-label="Rehacer corte">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
               </button>
-              <button class="btn icon-btn btn-download" id="track2-download" type="button" disabled aria-label="Descargar pista como MP3" title="Descargar MP3">
-                <svg class="icon" id="track2-dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
-              </button>
-              <button class="btn icon-btn" id="track2-clear" type="button" disabled aria-label="Borrar pista" title="Borrar pista">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
-              </button>
+            </div>
+            <!-- Ecualizador de 3 bandas — Pista 1 -->
+            <div class="track-eq-block">
+              <span class="section-label" style="display:block;margin-bottom:8px;">Ecualizador</span>
+              <div class="eq-row">
+                <div class="eq-band">
+                  <span class="eq-label">Graves</span>
+                  <input type="range" id="track1-eq-bass" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Graves de la pista">
+                  <span class="eq-readout" id="track1-eq-bass-readout">0dB</span>
+                </div>
+                <div class="eq-band">
+                  <span class="eq-label">Medios</span>
+                  <input type="range" id="track1-eq-mid" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Medios de la pista">
+                  <span class="eq-readout" id="track1-eq-mid-readout">0dB</span>
+                </div>
+                <div class="eq-band">
+                  <span class="eq-label">Agudos</span>
+                  <input type="range" id="track1-eq-treble" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Agudos de la pista">
+                  <span class="eq-readout" id="track1-eq-treble-readout">0dB</span>
+                </div>
+              </div>
             </div>
           </div>
-          <!-- Track mini waveform -->
-          <div class="track-wave-wrap" id="track2-viewport">
-            <div class="track-wave-zoomframe" id="track2-zoomframe">
-              <canvas id="track2-canvas"></canvas>
-              <div class="trim-shade" id="track2-shade-start" style="left:0;width:0"></div>
-              <div class="trim-shade" id="track2-shade-end"   style="right:0;width:0"></div>
-              <div class="trim-handle start hidden" id="track2-handle-start">
-                <div class="trim-badge" id="track2-badge-start"></div>
+
+          <!-- Pista 2 -->
+          <div class="track-card">
+            <div class="track-card-inner">
+              <div class="track-head">
+                <input type="text" class="track-name-input" id="track2-name" value="Pista 2" maxlength="40" aria-label="Nombre de la pista">
+                <span class="track-status" id="track2-status">Vacia</span>
               </div>
-              <div class="trim-handle end hidden" id="track2-handle-end">
-                <div class="trim-badge" id="track2-badge-end"></div>
+              <div class="track-mic-row">
+                <span class="track-mic-label">Microfono</span>
+                <select class="input-select" id="track2-mic-device" aria-label="Microfono de la Pista 2">
+                  <option value="">Entrada predeterminada</option>
+                </select>
               </div>
-              <div class="seek-strip" id="track2-seek-strip"></div>
-              <div class="seek-cursor" id="track2-seek-cursor" style="left:0"></div>
-              <div class="seek-badge" id="track2-seek-badge">0.000s</div>
+              <div class="track-actions">
+                <button class="btn btn-main" id="track2-record" type="button">
+                  <svg class="icon" id="track2-rec-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle></svg>
+                  <span id="track2-rec-label">Grabar</span>
+                </button>
+                <button class="btn btn-secondary" id="track2-play" type="button" disabled>
+                  <svg class="icon" id="track2-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+                  <span id="track2-play-label">Play</span>
+                </button>
+                <button class="btn icon-btn btn-download" id="track2-download" type="button" disabled aria-label="Descargar pista como MP3" title="Descargar MP3">
+                  <svg class="icon" id="track2-dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
+                </button>
+                <button class="btn icon-btn btn-download" id="track2-download-wav" type="button" disabled aria-label="Descargar pista como WAV" title="Descargar WAV (alta calidad)">
+                  <svg class="icon" id="track2-dl-wav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
+                </button>
+                <button class="btn icon-btn" id="track2-clear" type="button" disabled aria-label="Borrar pista" title="Borrar pista">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
+                </button>
+              </div>
             </div>
-            <div class="track-wave-empty" id="track2-wave-empty">Sin grabacion</div>
-            <div class="dropzone-overlay" id="track2-dropzone">Soltar archivo de audio aqui</div>
-          </div>
-          <div class="zoom-row track-zoom-row">
-            <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
-            <input type="range" id="track2-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda de la pista">
-            <span class="readout" id="track2-zoom-readout">1.0x</span>
-            <button class="trim-undo-btn" id="track2-trim-undo" type="button" disabled title="Deshacer corte" aria-label="Deshacer corte">
-              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"></path></svg>
-            </button>
-            <button class="trim-undo-btn" id="track2-trim-redo" type="button" disabled title="Rehacer corte" aria-label="Rehacer corte">
-              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
-            </button>
-          </div>
-          <!-- Ecualizador de 3 bandas — Pista -->
-          <div class="track-eq-block">
-            <span class="section-label" style="display:block;margin-bottom:8px;">Ecualizador</span>
-            <div class="eq-row">
-              <div class="eq-band">
-                <span class="eq-label">Graves</span>
-                <input type="range" id="track2-eq-bass" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Graves de la pista">
-                <span class="eq-readout" id="track2-eq-bass-readout">0dB</span>
+            <!-- Track mini waveform -->
+            <div class="track-wave-wrap" id="track2-viewport">
+              <div class="track-wave-zoomframe" id="track2-zoomframe">
+                <canvas id="track2-canvas"></canvas>
+                <div class="trim-shade" id="track2-shade-start" style="left:0;width:0"></div>
+                <div class="trim-shade" id="track2-shade-end"   style="right:0;width:0"></div>
+                <div class="trim-handle start hidden" id="track2-handle-start">
+                  <div class="trim-badge" id="track2-badge-start"></div>
+                </div>
+                <div class="trim-handle end hidden" id="track2-handle-end">
+                  <div class="trim-badge" id="track2-badge-end"></div>
+                </div>
+                <div class="seek-strip" id="track2-seek-strip"></div>
+                <div class="seek-cursor" id="track2-seek-cursor" style="left:0"></div>
+                <div class="seek-badge" id="track2-seek-badge">0.000s</div>
               </div>
-              <div class="eq-band">
-                <span class="eq-label">Medios</span>
-                <input type="range" id="track2-eq-mid" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Medios de la pista">
-                <span class="eq-readout" id="track2-eq-mid-readout">0dB</span>
-              </div>
-              <div class="eq-band">
-                <span class="eq-label">Agudos</span>
-                <input type="range" id="track2-eq-treble" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Agudos de la pista">
-                <span class="eq-readout" id="track2-eq-treble-readout">0dB</span>
+              <div class="track-wave-empty" id="track2-wave-empty">Sin grabacion</div>
+              <div class="dropzone-overlay" id="track2-dropzone">Soltar archivo de audio aqui</div>
+            </div>
+            <div class="zoom-row track-zoom-row">
+              <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
+              <input type="range" id="track2-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda de la pista">
+              <span class="readout" id="track2-zoom-readout">1.0x</span>
+              <button class="trim-undo-btn" id="track2-trim-undo" type="button" disabled title="Deshacer corte" aria-label="Deshacer corte">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"></path></svg>
+              </button>
+              <button class="trim-undo-btn" id="track2-trim-redo" type="button" disabled title="Rehacer corte" aria-label="Rehacer corte">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
+              </button>
+            </div>
+            <!-- Ecualizador de 3 bandas — Pista 2 -->
+            <div class="track-eq-block">
+              <span class="section-label" style="display:block;margin-bottom:8px;">Ecualizador</span>
+              <div class="eq-row">
+                <div class="eq-band">
+                  <span class="eq-label">Graves</span>
+                  <input type="range" id="track2-eq-bass" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Graves de la pista">
+                  <span class="eq-readout" id="track2-eq-bass-readout">0dB</span>
+                </div>
+                <div class="eq-band">
+                  <span class="eq-label">Medios</span>
+                  <input type="range" id="track2-eq-mid" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Medios de la pista">
+                  <span class="eq-readout" id="track2-eq-mid-readout">0dB</span>
+                </div>
+                <div class="eq-band">
+                  <span class="eq-label">Agudos</span>
+                  <input type="range" id="track2-eq-treble" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Agudos de la pista">
+                  <span class="eq-readout" id="track2-eq-treble-readout">0dB</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1408,13 +1546,25 @@
         <span class="input-hint">En la UMC22: Canal 1 es la entrada combo XLR/TRS, Canal 2 es la entrada linea. "Ambos" mezcla microfono y linea directa en una sola pista mono.</span>
         <span class="input-hint channel-status" id="channel-status"></span>
         <div class="vu-wrap" aria-label="Nivel de entrada">
-          <span class="vu-label">Nivel de entrada</span>
+          <span class="vu-label">Nivel de entrada / salida</span>
           <div class="vu-row">
             <div class="vu-meter" id="vu-meter">
               <div class="vu-fill" id="vu-fill"></div>
             </div>
             <span class="clip-light" id="clip-light" title="Clipping (la señal toco 0dB)">CLIP</span>
           </div>
+        </div>
+      </section>
+
+      <section class="module" aria-label="Monitor en tiempo real">
+        <span class="section-label">Monitor en tiempo real</span>
+        <div class="scope-wrap">
+          <span class="scope-label">Osciloscopio</span>
+          <canvas class="scope-canvas" id="scope-canvas"></canvas>
+        </div>
+        <div class="scope-wrap">
+          <span class="scope-label">Espectro</span>
+          <canvas class="scope-canvas" id="spectrum-canvas"></canvas>
         </div>
       </section>
 
@@ -1465,7 +1615,18 @@ const state = {
   // Ecualizador de 3 bandas (graves/medios/agudos) — loop
   loopEqValues: { bass: 0, mid: 0, treble: 0 },
   loopEQNodes: null,
+  masterAnalyser: null,
   tracks: {
+    track1: {
+      buffer: null, sourceNode: null, chunks: [],
+      dataUrl: "", duration: 0, name: "",
+      isRecording: false, isPlaying: false, startTime: 0,
+      waveformData: [], analyser: null, liveRAF: null,
+      zoom: 1, seek: 0,
+      // Ecualizador de 3 bandas — pista
+      eqValues: { bass: 0, mid: 0, treble: 0 },
+      eqNodes: null
+    },
     track2: {
       buffer: null, sourceNode: null, chunks: [],
       dataUrl: "", duration: 0, name: "",
@@ -1479,7 +1640,7 @@ const state = {
   }
 };
 
-const trackIds = ["track2"];
+const trackIds = ["track1", "track2"];
 
 /* ─── ELEMENTOS DOM ─── */
 const els = {
@@ -1489,6 +1650,8 @@ const els = {
   btnClear:    document.getElementById("btn-clear"),
   btnDownload: document.getElementById("btn-download"),
   dlIcon:      document.getElementById("dl-icon"),
+  btnDownloadWav: document.getElementById("btn-download-wav"),
+  dlWavIcon:      document.getElementById("dl-wav-icon"),
   recLabel:    document.getElementById("rec-label"),
   recIcon:     document.getElementById("rec-icon"),
   playLabel:   document.getElementById("play-label"),
@@ -1509,6 +1672,8 @@ const els = {
   beatLights:  document.querySelectorAll(".beat-light"),
   vuFill:           document.getElementById("vu-fill"),
   clipLight:        document.getElementById("clip-light"),
+  scopeCanvas:      document.getElementById("scope-canvas"),
+  spectrumCanvas:   document.getElementById("spectrum-canvas"),
   channelStatus:    document.getElementById("channel-status"),
   inputChannel:     document.getElementById("input-channel"),
   countinBarsDisplay: document.getElementById("countin-bars-display"),
@@ -1547,6 +1712,9 @@ trackIds.forEach(id => {
     waveEmpty:  document.getElementById(`${id}-wave-empty`),
     download:   document.getElementById(`${id}-download`),
     dlIcon:     document.getElementById(`${id}-dl-icon`),
+    downloadWav: document.getElementById(`${id}-download-wav`),
+    dlWavIcon:   document.getElementById(`${id}-dl-wav-icon`),
+    micSelect:  document.getElementById(`${id}-mic-device`),
     viewport:    document.getElementById(`${id}-viewport`),
     zoomframe:   document.getElementById(`${id}-zoomframe`),
     zoom:        document.getElementById(`${id}-zoom`),
@@ -1611,6 +1779,12 @@ async function initAudio() {
     state.gainNode = state.audioCtx.createGain();
     state.gainNode.gain.value = Number(els.volume.value) / 100;
     state.gainNode.connect(state.audioCtx.destination);
+    // Analizador "maestro": escucha la salida general (loop + pistas en
+    // reproduccion) para alimentar el osciloscopio, el espectro y el VU
+    // meter cuando no hay una grabacion activa.
+    state.masterAnalyser = state.audioCtx.createAnalyser();
+    state.masterAnalyser.fftSize = 2048;
+    state.gainNode.connect(state.masterAnalyser);
   }
   if (state.audioCtx.state === "suspended") await state.audioCtx.resume();
   await ensurePCMWorklet();
@@ -1924,6 +2098,59 @@ function encodeWavMono(samples, sampleRate) {
   return new Blob([buffer], { type: "audio/wav" });
 }
 
+// Codifica un AudioBuffer completo (mono o estereo, cualquier sample rate)
+// a WAV PCM lineal sin recompresion, en 24 bits por defecto ("alta calidad",
+// bastante mas resolucion que el CD de 16 bits) para exportacion.
+function audioBufferToWav(buffer, bitDepth = 24) {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const numFrames = buffer.length;
+  const bytesPerSample = bitDepth === 16 ? 2 : 3;
+  const blockAlign = numChannels * bytesPerSample;
+  const dataSize = numFrames * blockAlign;
+  const arrayBuffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(arrayBuffer);
+
+  function writeString(offset, str) {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM lineal
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitDepth, true);
+  writeString(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  const channelData = [];
+  for (let ch = 0; ch < numChannels; ch++) channelData.push(buffer.getChannelData(ch));
+
+  let offset = 44;
+  for (let i = 0; i < numFrames; i++) {
+    for (let ch = 0; ch < numChannels; ch++) {
+      const s = Math.max(-1, Math.min(1, channelData[ch][i]));
+      if (bitDepth === 16) {
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        offset += 2;
+      } else {
+        const val = Math.round(s < 0 ? s * 0x800000 : s * 0x7FFFFF);
+        view.setUint8(offset, val & 0xFF);
+        view.setUint8(offset + 1, (val >> 8) & 0xFF);
+        view.setUint8(offset + 2, (val >> 16) & 0xFF);
+        offset += 3;
+      }
+    }
+  }
+  return new Blob([arrayBuffer], { type: "audio/wav" });
+}
+
 // Desconecta y limpia todo el grafo de grabacion (worklet/mediaRecorder/splitter/stream)
 function teardownRecordingGraph(targetId) {
   if (state.recWorkletNode) {
@@ -2032,10 +2259,16 @@ function isAnyTrackRecording() {
   return trackIds.some(id => state.tracks[id].isRecording);
 }
 
+function isAnyTrackPlaying() {
+  return trackIds.some(id => state.tracks[id].isPlaying);
+}
+
 /* ─── MICRÓFONO / ENTRADA DE AUDIO ─── */
-// Intenta obtener el audio sin bloquear en file:// usando constraints permisivos
-async function getMic() {
-  const chosenId = els.inputDevice ? els.inputDevice.value : "";
+// Intenta obtener el audio sin bloquear en file:// usando constraints permisivos.
+// deviceId: si se pasa explicitamente (por ejemplo, el microfono elegido para
+// una pista en particular), se usa ese; si no, se usa el selector global (loop).
+async function getMic(deviceId) {
+  const chosenId = deviceId != null ? deviceId : (els.inputDevice ? els.inputDevice.value : "");
   const baseAudioConstraints = {
     echoCancellation: false,
     noiseSuppression: false,
@@ -2065,53 +2298,74 @@ async function getMic() {
   }
 }
 
-// Llena el selector de entrada con los dispositivos de audio disponibles
+// Lista de todos los selectores de dispositivo de entrada de la app: el
+// selector global (usado por el loop) y uno independiente por cada pista de
+// grabacion, para poder elegir un microfono distinto para cada una.
+function allDeviceSelects() {
+  const list = [];
+  if (els.inputDevice) list.push({ el: els.inputDevice, key: "ayun-input-device-id", auto: true });
+  trackIds.forEach(id => {
+    const el = tracksEls[id] && tracksEls[id].micSelect;
+    if (el) list.push({ el, key: `ayun-input-device-id-${id}`, auto: false });
+  });
+  return list;
+}
+
+// Llena todos los selectores de entrada (loop + cada pista) con los
+// dispositivos de audio disponibles, preservando la preferencia guardada
+// de cada uno por separado.
 async function populateInputDevices() {
-  if (!els.inputDevice || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  const selects = allDeviceSelects();
+  if (!selects.length) return;
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const inputs = devices.filter(d => d.kind === "audioinput");
-    const previousValue = els.inputDevice.value;
-    els.inputDevice.innerHTML = "";
 
-    const defaultOpt = document.createElement("option");
-    defaultOpt.value = "";
-    defaultOpt.textContent = "Entrada predeterminada";
-    els.inputDevice.appendChild(defaultOpt);
+    selects.forEach(({ el, key, auto }) => {
+      const previousValue = el.value;
+      el.innerHTML = "";
 
-    inputs.forEach((d, i) => {
-      const opt = document.createElement("option");
-      opt.value = d.deviceId;
-      opt.textContent = d.label || `Entrada de audio ${i + 1}`;
-      els.inputDevice.appendChild(opt);
-    });
+      const defaultOpt = document.createElement("option");
+      defaultOpt.value = "";
+      defaultOpt.textContent = "Entrada predeterminada";
+      el.appendChild(defaultOpt);
 
-    const savedId = localStorage.getItem("ayun-input-device-id");
-    if (savedId && inputs.some(d => d.deviceId === savedId)) {
-      els.inputDevice.value = savedId;
-    } else if (previousValue && inputs.some(d => d.deviceId === previousValue)) {
-      els.inputDevice.value = previousValue;
-    } else {
-      // Sin preferencia guardada: si hay una UMC22 (u otra Behringer/UMC) conectada, usarla por defecto
-      const auto = inputs.find(d => /UMC\s*22|UMC\b|Behringer/i.test(d.label || ""));
-      if (auto) {
-        els.inputDevice.value = auto.deviceId;
-        try { localStorage.setItem("ayun-input-device-id", auto.deviceId); } catch (e) {}
+      inputs.forEach((d, i) => {
+        const opt = document.createElement("option");
+        opt.value = d.deviceId;
+        opt.textContent = d.label || `Entrada de audio ${i + 1}`;
+        el.appendChild(opt);
+      });
+
+      let savedId = null;
+      try { savedId = localStorage.getItem(key); } catch (e) {}
+      if (savedId && inputs.some(d => d.deviceId === savedId)) {
+        el.value = savedId;
+      } else if (previousValue && inputs.some(d => d.deviceId === previousValue)) {
+        el.value = previousValue;
+      } else if (auto) {
+        // Sin preferencia guardada: si hay una UMC22 (u otra Behringer/UMC) conectada, usarla por defecto
+        const autoDev = inputs.find(d => /UMC\s*22|UMC\b|Behringer/i.test(d.label || ""));
+        if (autoDev) {
+          el.value = autoDev.deviceId;
+          try { localStorage.setItem(key, autoDev.deviceId); } catch (e) {}
+        }
       }
-    }
+    });
   } catch (e) {
     // enumerateDevices puede fallar sin permiso previo; se reintenta luego de getUserMedia
   }
 }
 
-if (els.inputDevice) {
-  els.inputDevice.addEventListener("change", () => {
-    try { localStorage.setItem("ayun-input-device-id", els.inputDevice.value); } catch (e) {}
+allDeviceSelects().forEach(({ el, key }) => {
+  el.addEventListener("change", () => {
+    try { localStorage.setItem(key, el.value); } catch (e) {}
   });
-  populateInputDevices();
-  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
-    navigator.mediaDevices.addEventListener("devicechange", populateInputDevices);
-  }
+});
+populateInputDevices();
+if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+  navigator.mediaDevices.addEventListener("devicechange", populateInputDevices);
 }
 
 if (els.inputChannel) {
@@ -2126,7 +2380,12 @@ if (els.inputChannel) {
   });
 }
 
-/* ─── VU METER (nivel de entrada) ─── */
+/* ─── VU METER / OSCILOSCOPIO / ESPECTRO (monitor en tiempo real) ───
+   Un solo analizador "activo" alimenta los tres medidores: mientras se
+   graba (loop o alguna pista) se usa el analizador de esa fuente para
+   escuchar exactamente lo que entra por el microfono elegido; en
+   cualquier otro momento (reproduccion del loop y/o las pistas) se usa
+   el analizador maestro conectado a la salida general. */
 function getActiveAnalyser() {
   if (state.activeTarget === "main" && state.analyser) return state.analyser;
   if (state.activeTarget && state.tracks[state.activeTarget] && state.tracks[state.activeTarget].analyser) {
@@ -2135,40 +2394,122 @@ function getActiveAnalyser() {
   return null;
 }
 
+function getMonitorAnalyser() {
+  return getActiveAnalyser() || state.masterAnalyser || null;
+}
+
+function ensureScopeCanvasSize(canvas) {
+  const ratio = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.floor(canvas.clientWidth * ratio));
+  const h = Math.max(1, Math.floor(canvas.clientHeight * ratio));
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  return ratio;
+}
+
+// Osciloscopio: dibuja la forma de onda instantanea (dominio del tiempo)
+function drawScope(ctx, canvas, analyser, data) {
+  const ratio = ensureScopeCanvasSize(canvas);
+  const w = canvas.width / ratio, h = canvas.height / ratio;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(255,255,255,.08)";
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+
+  analyser.getByteTimeDomainData(data);
+  ctx.strokeStyle = "#8fd29c";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  const len = data.length;
+  for (let i = 0; i < len; i++) {
+    const x = (i / (len - 1)) * w;
+    const y = (data[i] / 255) * h;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+// Espectro en tiempo real: barras de energia por banda de frecuencia (FFT)
+function drawSpectrum(ctx, canvas, analyser, data) {
+  const ratio = ensureScopeCanvasSize(canvas);
+  const w = canvas.width / ratio, h = canvas.height / ratio;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  analyser.getByteFrequencyData(data);
+  const barCount = Math.min(64, data.length);
+  const step = Math.max(1, Math.floor(data.length / barCount));
+  const bw = w / barCount;
+  for (let i = 0; i < barCount; i++) {
+    let sum = 0;
+    for (let j = 0; j < step; j++) sum += data[i * step + j] || 0;
+    const v = (sum / step) / 255;
+    const bh = Math.max(1, v * h);
+    const x = i * bw;
+    const g = ctx.createLinearGradient(0, h - bh, 0, h);
+    g.addColorStop(0, "#ffd08a");
+    g.addColorStop(1, "#93b7ff");
+    ctx.fillStyle = g;
+    ctx.fillRect(x + 1, h - bh, Math.max(1, bw - 2), bh);
+  }
+}
+
+function clearScopeCanvases() {
+  [els.scopeCanvas, els.spectrumCanvas].forEach(c => {
+    if (!c) return;
+    const ratio = ensureScopeCanvasSize(c);
+    const ctx = c.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, c.width / ratio, c.height / ratio);
+  });
+}
+
 function startVUMeter() {
   cancelAnimationFrame(state.vuRAF);
   const CLIP_THRESHOLD = 0.98; // ~ -0.18 dBFS: se considera clipping
   const CLIP_HOLD_MS = 1200;   // tiempo que se mantiene encendido el indicador
-  const buf = new Float32Array(512);
   let clipHoldUntil = 0;
+  const scopeCtx = els.scopeCanvas ? els.scopeCanvas.getContext("2d") : null;
+  const spectrumCtx = els.spectrumCanvas ? els.spectrumCanvas.getContext("2d") : null;
   function loop() {
-    const stillActive = state.countInActive || state.isRecording || isAnyTrackRecording();
-    const analyser = getActiveAnalyser();
+    const stillActive = state.countInActive || state.isRecording || isAnyTrackRecording() || state.isPlaying || isAnyTrackPlaying();
+    const analyser = getMonitorAnalyser();
     if (analyser) {
-      const data = buf.length === analyser.fftSize ? buf : new Float32Array(analyser.fftSize);
-      analyser.getFloatTimeDomainData(data);
+      const timeData = new Float32Array(analyser.fftSize);
+      analyser.getFloatTimeDomainData(timeData);
       let sumSquares = 0;
       let peak = 0;
-      for (let i = 0; i < data.length; i++) {
-        const v = data[i];
+      for (let i = 0; i < timeData.length; i++) {
+        const v = timeData[i];
         sumSquares += v * v;
         const av = Math.abs(v);
         if (av > peak) peak = av;
       }
-      const rms = Math.sqrt(sumSquares / data.length);
+      const rms = Math.sqrt(sumSquares / timeData.length);
       const pct = Math.max(0, Math.min(100, Math.round(rms * 220)));
       if (els.vuFill) els.vuFill.style.width = pct + "%";
 
       if (peak >= CLIP_THRESHOLD) clipHoldUntil = performance.now() + CLIP_HOLD_MS;
       if (els.clipLight) els.clipLight.classList.toggle("active", performance.now() < clipHoldUntil);
+
+      if (scopeCtx && els.scopeCanvas) {
+        const scopeData = new Uint8Array(analyser.fftSize);
+        drawScope(scopeCtx, els.scopeCanvas, analyser, scopeData);
+      }
+      if (spectrumCtx && els.spectrumCanvas) {
+        const specData = new Uint8Array(analyser.frequencyBinCount);
+        drawSpectrum(spectrumCtx, els.spectrumCanvas, analyser, specData);
+      }
     } else {
       if (els.vuFill) els.vuFill.style.width = "0%";
       if (els.clipLight) els.clipLight.classList.remove("active");
+      clearScopeCanvases();
     }
     if (!stillActive) {
       state.vuRAF = null;
       if (els.vuFill) els.vuFill.style.width = "0%";
       if (els.clipLight) els.clipLight.classList.remove("active");
+      clearScopeCanvases();
       return;
     }
     state.vuRAF = requestAnimationFrame(loop);
@@ -2181,6 +2522,7 @@ function stopVUMeter() {
   state.vuRAF = null;
   if (els.vuFill) els.vuFill.style.width = "0%";
   if (els.clipLight) els.clipLight.classList.remove("active");
+  clearScopeCanvases();
 }
 
 /* ─── LOOP RECORDING ─── */
@@ -2274,8 +2616,9 @@ async function startTrackRecording(id) {
   if (state.countInActive || state.isRecording || isAnyTrackRecording()) return;
   if (!(await initAudio())) return;
 
+  const trackMicId = tracksEls[id] && tracksEls[id].micSelect ? tracksEls[id].micSelect.value : "";
   try {
-    state.mediaStream = await getMic();
+    state.mediaStream = await getMic(trackMicId);
   } catch (err) {
     showMicError("No se pudo acceder al microfono. Si usas Chrome localmente, ejecuta con: --allow-file-access-from-files");
     return;
@@ -2376,6 +2719,7 @@ function startTrackPlayback(id, when) {
   track.sourceNode.start(when || 0, offset);
   track.isPlaying = true;
   setTrackStatus(id, "playing");
+  if (!state.vuRAF) startVUMeter();
 }
 
 function stopTrackPlayback(id) {
@@ -2418,6 +2762,7 @@ function startPlayback(when) {
   state.isPlaying = true;
   setStatus("playing");
   startPlayhead();
+  if (!state.vuRAF) startVUMeter();
 }
 
 function stopPlayback() {
@@ -2655,7 +3000,9 @@ trackIds.forEach(id => {
 
 // trim state: { startRatio: 0..1, endRatio: 0..1, originalBuffer, dragging: null, history: [...], historyIndex }
 state.loopTrim = { startRatio: 0, endRatio: 1, originalBuffer: null, history: [{ startRatio: 0, endRatio: 1 }], historyIndex: 0 };
-state.tracks.track2.trim = { startRatio: 0, endRatio: 1, originalBuffer: null, history: [{ startRatio: 0, endRatio: 1 }], historyIndex: 0 };
+trackIds.forEach(id => {
+  state.tracks[id].trim = { startRatio: 0, endRatio: 1, originalBuffer: null, history: [{ startRatio: 0, endRatio: 1 }], historyIndex: 0 };
+});
 
 function showTrimHandles(which) {
   if (which === "loop") {
@@ -3026,8 +3373,10 @@ function redoTrim(which) {
 
 els.loopTrimUndo?.addEventListener("click", () => undoTrim("loop"));
 els.loopTrimRedo?.addEventListener("click", () => redoTrim("loop"));
-tracksEls.track2.trimUndo?.addEventListener("click", () => undoTrim("track2"));
-tracksEls.track2.trimRedo?.addEventListener("click", () => redoTrim("track2"));
+trackIds.forEach(id => {
+  tracksEls[id].trimUndo?.addEventListener("click", () => undoTrim(id));
+  tracksEls[id].trimRedo?.addEventListener("click", () => redoTrim(id));
+});
 
 function resetTrim(which) {
   const trim = which === "loop" ? state.loopTrim : state.tracks[which].trim;
@@ -3056,9 +3405,11 @@ function resetTrim(which) {
 
 // Init drag listeners once
 initTrimDrag("loop");
-initTrimDrag("track2");
 initSeekInteraction("loop");
-initSeekInteraction("track2");
+trackIds.forEach(id => {
+  initTrimDrag(id);
+  initSeekInteraction(id);
+});
 
 /* ─── COUNT-IN ─── */
 function startCountIn(onComplete) {
@@ -3338,6 +3689,56 @@ async function downloadTrackMP3(id) {
 }
 
 
+/* ─── WAV EXPORT (alta calidad, sin perdida) ─── */
+async function downloadLoopWAV() {
+  if (!state.loopBuffer) return;
+  els.dlWavIcon.innerHTML = '<path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8V4z"/>';
+  els.dlWavIcon.classList.add("spinning");
+  els.btnDownloadWav.disabled = true;
+  try {
+    const buffer = await renderWithEQ(state.loopBuffer, state.loopEqValues);
+    const blob = audioBufferToWav(buffer, 24);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(els.loopName.value.trim() || "loop")}.wav`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch (err) {
+    showMicError("No se pudo exportar como WAV. Intenta de nuevo.");
+    console.error(err);
+  }
+  els.dlWavIcon.innerHTML = '<path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/>';
+  els.dlWavIcon.classList.remove("spinning");
+  els.btnDownloadWav.disabled = false;
+}
+
+async function downloadTrackWAV(id) {
+  const track = state.tracks[id];
+  if (!track.buffer) return;
+  const e = tracksEls[id];
+  if (!e.downloadWav) return;
+  e.dlWavIcon.innerHTML = '<path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8V4z"/>';
+  e.dlWavIcon.classList.add("spinning");
+  e.downloadWav.disabled = true;
+  try {
+    const buffer = await renderWithEQ(track.buffer, track.eqValues);
+    const blob = audioBufferToWav(buffer, 24);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${track.name || "pista"}.wav`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch (err) {
+    showMicError("No se pudo exportar la pista como WAV.");
+    console.error(err);
+  }
+  e.dlWavIcon.innerHTML = '<path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/>';
+  e.dlWavIcon.classList.remove("spinning");
+  e.downloadWav.disabled = false;
+}
+
 function storageKey(id) { return `ayun${id.charAt(0).toUpperCase()}${id.slice(1)}`; }
 
 function saveTrack(id) {
@@ -3490,7 +3891,7 @@ function setupDropzone(dropTargetEl, overlayEl, which) {
 }
 
 setupDropzone(els.waveViewport, els.loopDropzone, "loop");
-setupDropzone(tracksEls.track2.viewport, tracksEls.track2.dropzone, "track2");
+trackIds.forEach(id => setupDropzone(tracksEls[id].viewport, tracksEls[id].dropzone, id));
 
 /* ─── EVENT LISTENERS ─── */
 els.btnRecord.addEventListener("click", async () => {
@@ -3530,6 +3931,7 @@ trackIds.forEach(id => {
   });
 
   e.download.addEventListener("click", () => downloadTrackMP3(id));
+  e.downloadWav?.addEventListener("click", () => downloadTrackWAV(id));
 });
 
 /* ─── PLAY TODO (loop + pista al mismo tiempo, sincronizados por audioCtx.currentTime) ─── */
@@ -3540,43 +3942,45 @@ const elsTodoSub     = document.getElementById("play-todo-sub");
 
 function updatePlayTodoBtn() {
   const hasLoop  = !!state.loopBuffer;
-  const hasTrack = !!state.tracks.track2.buffer;
-  elsBtnPlayTodo.disabled = !(hasLoop || hasTrack);
+  const hasAnyTrack = trackIds.some(id => !!state.tracks[id].buffer);
+  elsBtnPlayTodo.disabled = !(hasLoop || hasAnyTrack);
 
-  const bothPlaying = state.isPlaying && state.tracks.track2.isPlaying;
-  const anyPlaying  = state.isPlaying || state.tracks.track2.isPlaying;
+  const totalSources  = (hasLoop ? 1 : 0) + trackIds.filter(id => !!state.tracks[id].buffer).length;
+  const playingCount  = (state.isPlaying ? 1 : 0) + trackIds.filter(id => state.tracks[id].isPlaying).length;
+  const allPlaying    = totalSources > 0 && playingCount === totalSources;
+  const anyPlaying    = playingCount > 0;
 
   elsBtnPlayTodo.classList.toggle("active", anyPlaying);
 
-  if (bothPlaying) {
+  if (allPlaying) {
     elsTodoIcon.innerHTML = '<path d="M6 19h4V5H6zm8-14v14h4V5z"/>';
     elsTodoLabel.textContent = "Detener Todo";
-    elsTodoSub.textContent   = "Loop y pista en reproduccion";
+    elsTodoSub.textContent   = "Loop y pistas en reproduccion";
   } else if (anyPlaying) {
     elsTodoIcon.innerHTML = '<path d="M6 19h4V5H6zm8-14v14h4V5z"/>';
     elsTodoLabel.textContent = "Detener Todo";
     elsTodoSub.textContent   = "Deteniendo reproduccion...";
   } else {
     elsTodoIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
-    elsTodoLabel.textContent = "Play Loop + Pista";
+    elsTodoLabel.textContent = "Play Loop + Pistas";
     elsTodoSub.textContent   = "Inician juntos al mismo tiempo";
   }
 }
 
 elsBtnPlayTodo.addEventListener("click", async () => {
-  const anyPlaying = state.isPlaying || state.tracks.track2.isPlaying;
+  const anyPlaying = state.isPlaying || isAnyTrackPlaying();
 
   if (anyPlaying) {
     // Detener todo
-    if (state.isPlaying)              stopPlayback();
-    if (state.tracks.track2.isPlaying) stopTrackPlayback("track2");
+    if (state.isPlaying) stopPlayback();
+    trackIds.forEach(id => { if (state.tracks[id].isPlaying) stopTrackPlayback(id); });
   } else {
-    // Iniciar todo junto: un mismo instante "when" para ambos .start(),
-    // para que no queden desfasados por el tiempo entre dos llamadas JS separadas.
+    // Iniciar todo junto: un mismo instante "when" para todos los .start(),
+    // para que no queden desfasados por el tiempo entre llamadas JS separadas.
     await initAudio();
     const when = state.audioCtx.currentTime + 0.05;
-    if (state.loopBuffer)              startPlayback(when);
-    if (state.tracks.track2.buffer)    startTrackPlayback("track2", when);
+    if (state.loopBuffer) startPlayback(when);
+    trackIds.forEach(id => { if (state.tracks[id].buffer) startTrackPlayback(id, when); });
   }
   updatePlayTodoBtn();
 });
@@ -3592,6 +3996,7 @@ els.btnClear.addEventListener("click", () => {
 });
 
 els.btnDownload.addEventListener("click", downloadMP3);
+els.btnDownloadWav?.addEventListener("click", downloadLoopWAV);
 
 els.loopName.addEventListener("change", () => {
   els.loopName.value = els.loopName.value.trim() || "Loop";
