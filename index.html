@@ -892,7 +892,7 @@
   /* duration badge shown during drag */
   .trim-badge {
     position: absolute;
-    bottom: calc(100% + 6px);
+    top: 4px;
     left: 50%;
     transform: translateX(-50%);
     padding: 3px 7px;
@@ -905,6 +905,7 @@
     white-space: nowrap;
     pointer-events: none;
     opacity: 1;
+    z-index: 11;
     transition: opacity .1s;
   }
 
@@ -2257,6 +2258,7 @@ async function finalizeCapture(targetId) {
     els.btnPlay.disabled = false;
     els.btnClear.disabled = false;
     els.btnDownload.disabled = false;
+    els.btnDownloadWav.disabled = false;
     buildWaveformData();
     drawWaveform();
     state.loopTrim.startRatio = 0; state.loopTrim.endRatio = 1; state.loopTrim.originalBuffer = null;
@@ -2831,6 +2833,7 @@ function clearLoop() {
   els.btnPlay.disabled = true;
   els.btnClear.disabled = true;
   els.btnDownload.disabled = true;
+  els.btnDownloadWav.disabled = true;
   hideTrimHandles("loop");
   state.loopTrim.startRatio = 0; state.loopTrim.endRatio = 1; state.loopTrim.originalBuffer = null;
   resetTrimHistory("loop");
@@ -3558,12 +3561,12 @@ function setTrackStatus(id, mode) {
   if (mode === "countin") {
     e.status.textContent = `Cuenta ${state.countInBars} compas${state.countInBars === 1 ? "" : "es"}`;
     e.recLabel.textContent = "Cancelar";
-    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; return;
+    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true; return;
   }
   if (mode === "recording") {
     e.status.textContent = "Grabando";
     e.recLabel.textContent = "Detener";
-    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; return;
+    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true; return;
   }
   if (mode === "playing") {
     e.status.textContent = "Reproduciendo";
@@ -3572,10 +3575,10 @@ function setTrackStatus(id, mode) {
   }
   if (track.buffer) {
     e.status.textContent = `${track.duration.toFixed(3)}s`;
-    e.play.disabled = false; e.clear.disabled = false; e.download.disabled = false;
+    e.play.disabled = false; e.clear.disabled = false; e.download.disabled = false; if (e.downloadWav) e.downloadWav.disabled = false;
   } else {
     e.status.textContent = "Vacia";
-    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true;
+    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
   }
   e.recLabel.textContent = "Grabar"; e.playLabel.textContent = "Play";
   if (typeof updatePlayTodoBtn === "function") updatePlayTodoBtn();
@@ -3900,6 +3903,7 @@ async function loadAudioFileInto(which, file) {
     els.btnPlay.disabled = false;
     els.btnClear.disabled = false;
     els.btnDownload.disabled = false;
+    els.btnDownloadWav.disabled = false;
     setStatus("ready");
   } else {
     const track = state.tracks[which];
