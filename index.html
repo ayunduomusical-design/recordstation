@@ -950,6 +950,56 @@
     padding: 0 13px 13px;
   }
 
+  /* ── ECUALIZADOR 3 BANDAS ── */
+  .eq-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 8px;
+  }
+
+  .track-eq-block {
+    padding: 0 13px 13px;
+  }
+
+  .eq-band {
+    display: grid;
+    gap: 5px;
+    padding: 9px 8px 7px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--panel-2);
+    justify-items: center;
+  }
+
+  .eq-label {
+    color: var(--soft);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .eq-band input[type="range"] { width: 100%; }
+
+  .eq-band input[type="range"]::-webkit-slider-runnable-track {
+    background: linear-gradient(90deg, var(--blue) var(--fill, 50%), var(--panel-3) var(--fill, 50%));
+  }
+
+  .eq-band input[type="range"]::-webkit-slider-thumb {
+    background: var(--blue);
+    box-shadow: 0 0 12px rgba(147,183,255,.35);
+  }
+
+  .eq-readout {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  @media (max-width: 480px) {
+    .eq-row { grid-template-columns: 1fr; }
+  }
+
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinning { animation: spin .8s linear infinite; }
 
@@ -1154,6 +1204,28 @@
         </div>
       </section>
 
+      <!-- Ecualizador de 3 bandas — Loop -->
+      <section class="module" aria-label="Ecualizador del loop" style="padding-bottom:0;border-bottom:0;">
+        <span class="section-label">Ecualizador (Loop)</span>
+        <div class="eq-row">
+          <div class="eq-band">
+            <span class="eq-label">Graves</span>
+            <input type="range" id="loop-eq-bass" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Graves del loop">
+            <span class="eq-readout" id="loop-eq-bass-readout">0dB</span>
+          </div>
+          <div class="eq-band">
+            <span class="eq-label">Medios</span>
+            <input type="range" id="loop-eq-mid" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Medios del loop">
+            <span class="eq-readout" id="loop-eq-mid-readout">0dB</span>
+          </div>
+          <div class="eq-band">
+            <span class="eq-label">Agudos</span>
+            <input type="range" id="loop-eq-treble" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Agudos del loop">
+            <span class="eq-readout" id="loop-eq-treble-readout">0dB</span>
+          </div>
+        </div>
+      </section>
+
       <!-- Play Todo — Loop + Pista juntos -->
       <div class="play-todo-wrap">
         <span class="play-todo-label">Reproduccion sincronizada</span>
@@ -1292,6 +1364,27 @@
               <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
             </button>
           </div>
+          <!-- Ecualizador de 3 bandas — Pista -->
+          <div class="track-eq-block">
+            <span class="section-label" style="display:block;margin-bottom:8px;">Ecualizador</span>
+            <div class="eq-row">
+              <div class="eq-band">
+                <span class="eq-label">Graves</span>
+                <input type="range" id="track2-eq-bass" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Graves de la pista">
+                <span class="eq-readout" id="track2-eq-bass-readout">0dB</span>
+              </div>
+              <div class="eq-band">
+                <span class="eq-label">Medios</span>
+                <input type="range" id="track2-eq-mid" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Medios de la pista">
+                <span class="eq-readout" id="track2-eq-mid-readout">0dB</span>
+              </div>
+              <div class="eq-band">
+                <span class="eq-label">Agudos</span>
+                <input type="range" id="track2-eq-treble" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Agudos de la pista">
+                <span class="eq-readout" id="track2-eq-treble-readout">0dB</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1369,13 +1462,19 @@ const state = {
   activeRouting: null,
   recChannelUsed: null,
   loopSeek: 0,
+  // Ecualizador de 3 bandas (graves/medios/agudos) — loop
+  loopEqValues: { bass: 0, mid: 0, treble: 0 },
+  loopEQNodes: null,
   tracks: {
     track2: {
       buffer: null, sourceNode: null, chunks: [],
       dataUrl: "", duration: 0, name: "",
       isRecording: false, isPlaying: false, startTime: 0,
       waveformData: [], analyser: null, liveRAF: null,
-      zoom: 1, seek: 0
+      zoom: 1, seek: 0,
+      // Ecualizador de 3 bandas — pista
+      eqValues: { bass: 0, mid: 0, treble: 0 },
+      eqNodes: null
     }
   }
 };
@@ -1515,8 +1614,123 @@ async function initAudio() {
   }
   if (state.audioCtx.state === "suspended") await state.audioCtx.resume();
   await ensurePCMWorklet();
+  ensureEQChains();
   return true;
 }
+
+/* ─── ECUALIZADOR DE 3 BANDAS (graves/medios/agudos) ───
+   Tres BiquadFilterNode en cadena: lowshelf (graves) -> peaking (medios)
+   -> highshelf (agudos). Se usan tanto en reproduccion en vivo (conectados
+   entre la fuente y el gainNode principal) como al exportar a MP3, donde
+   se renderizan "offline" con OfflineAudioContext para que el archivo
+   descargado quede ya ecualizado. */
+function createEQChain(ctx, values) {
+  const bass = ctx.createBiquadFilter();
+  bass.type = "lowshelf";
+  bass.frequency.value = 200;
+  bass.gain.value = values.bass;
+
+  const mid = ctx.createBiquadFilter();
+  mid.type = "peaking";
+  mid.frequency.value = 1000;
+  mid.Q.value = 1;
+  mid.gain.value = values.mid;
+
+  const treble = ctx.createBiquadFilter();
+  treble.type = "highshelf";
+  treble.frequency.value = 4000;
+  treble.gain.value = values.treble;
+
+  bass.connect(mid);
+  mid.connect(treble);
+
+  return { bass, mid, treble, input: bass, output: treble };
+}
+
+// Crea (una sola vez) las cadenas de EQ del loop y de cada pista, y las
+// conecta hacia el gainNode principal. Se puede llamar varias veces sin
+// problema: si ya existen, no hace nada.
+function ensureEQChains() {
+  if (!state.audioCtx || !state.gainNode) return;
+  if (!state.loopEQNodes) {
+    state.loopEQNodes = createEQChain(state.audioCtx, state.loopEqValues);
+    state.loopEQNodes.output.connect(state.gainNode);
+  }
+  trackIds.forEach(id => {
+    const track = state.tracks[id];
+    if (!track.eqNodes) {
+      track.eqNodes = createEQChain(state.audioCtx, track.eqValues);
+      track.eqNodes.output.connect(state.gainNode);
+    }
+  });
+}
+
+// Renderiza un AudioBuffer a traves de la cadena de EQ usando
+// OfflineAudioContext, devolviendo un nuevo buffer ya procesado. Si las
+// 3 bandas estan en 0dB, devuelve el buffer original sin gastar tiempo
+// renderizando de mas.
+function renderWithEQ(buffer, eqValues) {
+  return new Promise((resolve, reject) => {
+    if (!buffer) { resolve(buffer); return; }
+    if (!eqValues || (!eqValues.bass && !eqValues.mid && !eqValues.treble)) {
+      resolve(buffer);
+      return;
+    }
+    try {
+      const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!OfflineCtx) { resolve(buffer); return; }
+      const offlineCtx = new OfflineCtx(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+      const src = offlineCtx.createBufferSource();
+      src.buffer = buffer;
+      const chain = createEQChain(offlineCtx, eqValues);
+      src.connect(chain.input);
+      chain.output.connect(offlineCtx.destination);
+      src.start(0);
+      offlineCtx.startRendering().then(resolve).catch(reject);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+// Actualiza el relleno visual (--fill) de un slider de EQ segun su valor actual
+function updateEqFill(el) {
+  if (!el) return;
+  const min = Number(el.min), max = Number(el.max), val = Number(el.value);
+  const pct = max > min ? ((val - min) / (max - min)) * 100 : 50;
+  el.style.setProperty("--fill", pct + "%");
+}
+
+// Conecta un slider de EQ (graves/medios/agudos) a su valor de estado y,
+// si el nodo de filtro ya existe, actualiza la ganancia en vivo.
+function bindEqBand(sliderEl, readoutEl, valuesObj, band, getNodes) {
+  if (!sliderEl) return;
+  updateEqFill(sliderEl);
+  sliderEl.addEventListener("input", () => {
+    const v = Number(sliderEl.value);
+    valuesObj[band] = v;
+    if (readoutEl) readoutEl.textContent = (v > 0 ? "+" : "") + v + "dB";
+    updateEqFill(sliderEl);
+    const nodes = getNodes();
+    if (nodes) nodes[band].gain.value = v;
+  });
+}
+
+bindEqBand(document.getElementById("loop-eq-bass"),   document.getElementById("loop-eq-bass-readout"),   state.loopEqValues, "bass",   () => state.loopEQNodes);
+bindEqBand(document.getElementById("loop-eq-mid"),    document.getElementById("loop-eq-mid-readout"),    state.loopEqValues, "mid",    () => state.loopEQNodes);
+bindEqBand(document.getElementById("loop-eq-treble"), document.getElementById("loop-eq-treble-readout"), state.loopEqValues, "treble", () => state.loopEQNodes);
+
+trackIds.forEach(id => {
+  const track = state.tracks[id];
+  ["bass", "mid", "treble"].forEach(band => {
+    bindEqBand(
+      document.getElementById(`${id}-eq-${band}`),
+      document.getElementById(`${id}-eq-${band}-readout`),
+      track.eqValues, band,
+      () => track.eqNodes
+    );
+  });
+});
 
 /* ─── CAPTURA PCM (AudioWorklet) ───
    Sustituye a MediaRecorder para grabar: captura las muestras Float32
@@ -1530,9 +1744,12 @@ class AyunPCMRecorder extends AudioWorkletProcessor {
     this._chunk = new Float32Array(this._bufferSize);
     this._writeIndex = 0;
     this.port.onmessage = (e) => {
-      if (e.data === "flush" && this._writeIndex > 0) {
-        this.port.postMessage(this._chunk.slice(0, this._writeIndex));
-        this._writeIndex = 0;
+      if (e.data === "flush") {
+        if (this._writeIndex > 0) {
+          this.port.postMessage(this._chunk.slice(0, this._writeIndex));
+          this._writeIndex = 0;
+        }
+        this.port.postMessage("flushed");
       }
     };
   }
@@ -1570,6 +1787,30 @@ async function ensurePCMWorklet() {
     state.workletReady = false;
   }
   return state.workletReady;
+}
+
+/* Espera la confirmacion "flushed" del worklet antes de continuar, con
+   un margen de seguridad por si el mensaje se pierde (nunca deja colgada
+   la finalizacion de la toma). */
+function waitForWorkletFlush(node, timeoutMs = 400) {
+  return new Promise(resolve => {
+    if (!node) { resolve(); return; }
+    let done = false;
+    const prevHandler = node.port.onmessage;
+    const timer = setTimeout(finish, timeoutMs);
+    function finish() {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      node.port.onmessage = prevHandler;
+      resolve();
+    }
+    node.port.onmessage = ev => {
+      if (ev.data === "flushed") { finish(); return; }
+      if (typeof prevHandler === "function") prevHandler(ev);
+    };
+    node.port.postMessage("flush");
+  });
 }
 
 /* ─── RUTEO DE ENTRADA: elegir canal 1, canal 2, o ambos mezclados ───
@@ -1617,14 +1858,18 @@ function prepareInputRouting(stream) {
     };
   }
   return {
-    splitter: null, inputSource, channelUsed: 1,
+    splitter: null, inputSource, channelUsed: 1, onlyOneChannel: true,
     connectTo(node) { inputSource.connect(node); },
     disconnectFrom(node) { try { inputSource.disconnect(node); } catch (e) {} }
   };
 }
 
-function updateChannelStatus(channelUsed) {
+function updateChannelStatus(channelUsed, routing) {
   if (!els.channelStatus) return;
+  if (routing && routing.onlyOneChannel && els.inputChannel && els.inputChannel.value !== "1") {
+    els.channelStatus.textContent = "Tu interfaz solo entrego 1 canal de entrada (el navegador no concedio estereo): grabando en mono desde ese unico canal. El selector Canal 1/2/Ambos no aplica en este caso.";
+    return;
+  }
   if (channelUsed === "both") {
     els.channelStatus.textContent = "Grabando la mezcla de ambos canales (microfono + linea directa) en una sola pista mono.";
   } else {
@@ -1795,7 +2040,8 @@ async function getMic() {
     echoCancellation: false,
     noiseSuppression: false,
     autoGainControl: false,
-    channelCount: { ideal: 2 }
+    channelCount: { ideal: 2 },
+    sampleRate: { ideal: 48000 }
   };
   const constraints = {
     audio: chosenId
@@ -1956,7 +2202,7 @@ async function startRecording() {
   const routing = prepareInputRouting(state.mediaStream);
   state.activeRouting = routing;
   state.recChannelUsed = routing.channelUsed;
-  updateChannelStatus(routing.channelUsed);
+  updateChannelStatus(routing.channelUsed, routing);
 
   state.analyser = state.audioCtx.createAnalyser();
   state.analyser.fftSize = 512;
@@ -1997,7 +2243,7 @@ async function startRecording() {
   });
 }
 
-function stopRecording() {
+async function stopRecording() {
   if (state.countInActive) {
     cancelCountIn();
     stopVUMeter();
@@ -2012,9 +2258,11 @@ function stopRecording() {
   cancelAnimationFrame(state.waveformRAF);
 
   if (state.usingWorklet && state.recWorkletNode && state.activeRouting) {
-    state.activeRouting.disconnectFrom(state.recWorkletNode); // corta la entrada de audio ya mismo
-    state.recWorkletNode.port.postMessage("flush");           // pide el ultimo bloque parcial
-    setTimeout(() => { state.activeTarget = null; finalizeCapture("main"); }, 80);
+    const node = state.recWorkletNode;
+    state.activeRouting.disconnectFrom(node); // corta la entrada de audio ya mismo
+    await waitForWorkletFlush(node);           // espera confirmacion real del ultimo bloque (no un tiempo fijo)
+    state.activeTarget = null;
+    finalizeCapture("main");
   } else if (state.mediaRecorder) {
     state.mediaRecorder.addEventListener("stop", () => { state.activeTarget = null; finalizeCapture("main"); }, { once: true });
     state.mediaRecorder.stop();
@@ -2043,7 +2291,7 @@ async function startTrackRecording(id) {
   const routing = prepareInputRouting(state.mediaStream);
   state.activeRouting = routing;
   state.recChannelUsed = routing.channelUsed;
-  updateChannelStatus(routing.channelUsed);
+  updateChannelStatus(routing.channelUsed, routing);
 
   track.analyser = state.audioCtx.createAnalyser();
   track.analyser.fftSize = 512;
@@ -2084,7 +2332,7 @@ async function startTrackRecording(id) {
   setTrackStatus(id, "countin");
 }
 
-function stopTrackRecording(id) {
+async function stopTrackRecording(id) {
   const track = state.tracks[id];
   if (state.countInActive && state.activeTarget === id) {
     cancelCountIn();
@@ -2101,9 +2349,11 @@ function stopTrackRecording(id) {
   cancelAnimationFrame(track.liveRAF);
 
   if (state.usingWorklet && state.recWorkletNode && state.activeRouting) {
-    state.activeRouting.disconnectFrom(state.recWorkletNode);
-    state.recWorkletNode.port.postMessage("flush");
-    setTimeout(() => { state.activeTarget = null; finalizeCapture(id); }, 80);
+    const node = state.recWorkletNode;
+    state.activeRouting.disconnectFrom(node);
+    await waitForWorkletFlush(node);
+    state.activeTarget = null;
+    finalizeCapture(id);
   } else if (state.mediaRecorder) {
     state.mediaRecorder.addEventListener("stop", () => { state.activeTarget = null; finalizeCapture(id); }, { once: true });
     state.mediaRecorder.stop();
@@ -2111,19 +2361,19 @@ function stopTrackRecording(id) {
 }
 
 /* ─── TRACK PLAYBACK ─── */
-function startTrackPlayback(id) {
+function startTrackPlayback(id, when) {
   const track = state.tracks[id];
   if (!track.buffer || track.isPlaying) return;
   if (state.audioCtx.state === "suspended") state.audioCtx.resume();
   const offset = Math.max(0, Math.min(track.seek || 0, track.buffer.duration));
   track.sourceNode = state.audioCtx.createBufferSource();
   track.sourceNode.buffer = track.buffer;
-  track.sourceNode.connect(state.gainNode);
+  track.sourceNode.connect(track.eqNodes ? track.eqNodes.input : state.gainNode);
   track.sourceNode.addEventListener("ended", () => {
     track.isPlaying = false; track.sourceNode = null;
     setTrackStatus(id, "ready");
   }, { once: true });
-  track.sourceNode.start(0, offset);
+  track.sourceNode.start(when || 0, offset);
   track.isPlaying = true;
   setTrackStatus(id, "playing");
 }
@@ -2154,16 +2404,17 @@ function clearTrack(id) {
 }
 
 /* ─── LOOP PLAYBACK ─── */
-function startPlayback() {
+function startPlayback(when) {
   if (!state.loopBuffer || state.isPlaying) return;
   const offset = Math.max(0, Math.min(state.loopSeek || 0, state.loopBuffer.duration));
   state.loopPlayOffset = offset;
   state.sourceNode = state.audioCtx.createBufferSource();
   state.sourceNode.buffer = state.loopBuffer;
   state.sourceNode.loop = true;
-  state.sourceNode.connect(state.gainNode);
-  state.sourceNode.start(0, offset);
-  state.loopStartTime = state.audioCtx.currentTime;
+  state.sourceNode.connect(state.loopEQNodes ? state.loopEQNodes.input : state.gainNode);
+  const startAt = when || 0;
+  state.sourceNode.start(startAt, offset);
+  state.loopStartTime = startAt > state.audioCtx.currentTime ? startAt : state.audioCtx.currentTime;
   state.isPlaying = true;
   setStatus("playing");
   startPlayhead();
@@ -2201,7 +2452,7 @@ function startPlayhead() {
   cancelAnimationFrame(state.playheadRAF);
   function tick() {
     if (!state.isPlaying || !state.loopDuration) return;
-    const elapsed = ((state.loopPlayOffset || 0) + (state.audioCtx.currentTime - state.loopStartTime)) % state.loopDuration;
+    const elapsed = ((state.loopPlayOffset || 0) + Math.max(0, state.audioCtx.currentTime - state.loopStartTime)) % state.loopDuration;
     els.playhead.style.width = `${(elapsed / state.loopDuration) * 100}%`;
     state.playheadRAF = requestAnimationFrame(tick);
   }
@@ -2973,7 +3224,7 @@ async function downloadMP3() {
   els.btnDownload.disabled = true;
 
   try {
-    const buffer = state.loopBuffer;
+    const buffer = await renderWithEQ(state.loopBuffer, state.loopEqValues);
     const sampleRate = buffer.sampleRate;
     const numChannels = Math.min(buffer.numberOfChannels, 2);
     const leftChannel  = buffer.getChannelData(0);
@@ -3037,7 +3288,7 @@ async function downloadTrackMP3(id) {
   e.download.disabled = true;
 
   try {
-    const buffer = track.buffer;
+    const buffer = await renderWithEQ(track.buffer, track.eqValues);
     const sampleRate = buffer.sampleRate;
     const numChannels = Math.min(buffer.numberOfChannels, 2);
     const leftChannel  = buffer.getChannelData(0);
@@ -3244,9 +3495,9 @@ setupDropzone(tracksEls.track2.viewport, tracksEls.track2.dropzone, "track2");
 /* ─── EVENT LISTENERS ─── */
 els.btnRecord.addEventListener("click", async () => {
   if (state.countInActive && state.activeTarget && state.activeTarget !== "main") {
-    stopTrackRecording(state.activeTarget); return;
+    await stopTrackRecording(state.activeTarget); return;
   }
-  if (state.isRecording || state.countInActive) stopRecording();
+  if (state.isRecording || state.countInActive) await stopRecording();
   else await startRecording();
 });
 
@@ -3263,7 +3514,7 @@ trackIds.forEach(id => {
 
   e.record.addEventListener("click", async () => {
     if (track.isRecording || (state.countInActive && state.activeTarget === id))
-      stopTrackRecording(id);
+      await stopTrackRecording(id);
     else await startTrackRecording(id);
   });
 
@@ -3281,7 +3532,7 @@ trackIds.forEach(id => {
   e.download.addEventListener("click", () => downloadTrackMP3(id));
 });
 
-/* ─── PLAY TODO (loop + pista al mismo tiempo) ─── */
+/* ─── PLAY TODO (loop + pista al mismo tiempo, sincronizados por audioCtx.currentTime) ─── */
 const elsBtnPlayTodo = document.getElementById("btn-play-todo");
 const elsTodoIcon    = document.getElementById("play-todo-icon");
 const elsTodoLabel   = document.getElementById("play-todo-label");
@@ -3320,10 +3571,12 @@ elsBtnPlayTodo.addEventListener("click", async () => {
     if (state.isPlaying)              stopPlayback();
     if (state.tracks.track2.isPlaying) stopTrackPlayback("track2");
   } else {
-    // Iniciar todo junto
+    // Iniciar todo junto: un mismo instante "when" para ambos .start(),
+    // para que no queden desfasados por el tiempo entre dos llamadas JS separadas.
     await initAudio();
-    if (state.loopBuffer)              startPlayback();
-    if (state.tracks.track2.buffer)    startTrackPlayback("track2");
+    const when = state.audioCtx.currentTime + 0.05;
+    if (state.loopBuffer)              startPlayback(when);
+    if (state.tracks.track2.buffer)    startTrackPlayback("track2", when);
   }
   updatePlayTodoBtn();
 });
@@ -3400,9 +3653,9 @@ document.addEventListener("keydown", async ev => {
   if (ev.code === "Space") {
     ev.preventDefault();
     if (state.countInActive && state.activeTarget && state.activeTarget !== "main") {
-      stopTrackRecording(state.activeTarget); return;
+      await stopTrackRecording(state.activeTarget); return;
     }
-    if (state.isRecording || state.countInActive) stopRecording();
+    if (state.isRecording || state.countInActive) await stopRecording();
     else await startRecording();
   }
   if (ev.code === "KeyP") {
