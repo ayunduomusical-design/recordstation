@@ -33,13 +33,15 @@
     --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
 
-  html { min-height: 100%; background: var(--bg); }
+  html { min-height: 100%; background: var(--bg); overflow-x: hidden; }
 
   body {
     min-height: 100vh;
     margin: 0;
     color: var(--text);
     font-family: var(--sans);
+    max-width: 100vw;
+    overflow-x: hidden;
     background:
       linear-gradient(155deg, rgba(240,179,90,.10), transparent 30%),
       radial-gradient(circle at top right, rgba(147,183,255,.08), transparent 26%),
@@ -399,6 +401,16 @@
     justify-content: center;
     gap: 8px;
     border: 1px solid var(--line);
+    min-width: 0;
+  }
+
+  .transport .btn-main span,
+  .transport .btn-secondary span,
+  .track-actions .btn-main span,
+  .track-actions .btn-secondary span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .btn-main {
@@ -439,8 +451,8 @@
   }
 
   .icon-btn {
-    width: 44px;
-    min-width: 44px;
+    width: 100%;
+    min-width: 0;
     padding: 0;
     background: var(--panel-2);
     color: var(--muted);
@@ -892,7 +904,7 @@
     font-size: 11px;
     white-space: nowrap;
     pointer-events: none;
-    opacity: 0;
+    opacity: 1;
     transition: opacity .1s;
   }
 
@@ -1263,18 +1275,6 @@
         </div>
       </section>
 
-      <!-- Play Todo — Loop + Pista juntos -->
-      <div class="play-todo-wrap">
-        <span class="play-todo-label">Reproduccion sincronizada</span>
-        <button class="btn btn-play-todo" id="btn-play-todo" type="button" disabled>
-          <svg class="todo-icon" viewBox="0 0 24 24" aria-hidden="true" id="play-todo-icon"><path d="M8 5v14l11-7z"/></svg>
-          <span class="todo-text">
-            <span class="todo-title" id="play-todo-label">Play Loop + Pistas</span>
-            <span class="todo-sub" id="play-todo-sub">Inician juntos al mismo tiempo</span>
-          </span>
-        </button>
-      </div>
-
       <!-- Transport -->
       <div class="transport" aria-label="Controles principales">
         <button class="btn btn-main" id="btn-record" type="button">
@@ -1356,13 +1356,21 @@
           <div class="track-card">
             <div class="track-card-inner">
               <div class="track-head">
-                <input type="text" class="track-name-input" id="track1-name" value="Pista 1" maxlength="40" aria-label="Nombre de la pista">
+                <input type="text" class="track-name-input" id="track1-name" value="Pista 1 (edita el nombre)" maxlength="40" aria-label="Nombre de la pista">
                 <span class="track-status" id="track1-status">Vacia</span>
               </div>
               <div class="track-mic-row">
                 <span class="track-mic-label">Microfono</span>
                 <select class="input-select" id="track1-mic-device" aria-label="Microfono de la Pista 1">
                   <option value="">Entrada predeterminada</option>
+                </select>
+              </div>
+              <div class="track-mic-row">
+                <span class="track-mic-label">Canal</span>
+                <select class="input-select" id="track1-channel" aria-label="Canal de entrada de la Pista 1">
+                  <option value="1" selected>Canal 1 (izquierdo)</option>
+                  <option value="2">Canal 2 (derecho)</option>
+                  <option value="both">Ambos canales (mezclados)</option>
                 </select>
               </div>
               <div class="track-actions">
@@ -1442,13 +1450,21 @@
           <div class="track-card">
             <div class="track-card-inner">
               <div class="track-head">
-                <input type="text" class="track-name-input" id="track2-name" value="Pista 2" maxlength="40" aria-label="Nombre de la pista">
+                <input type="text" class="track-name-input" id="track2-name" value="Pista 2 (edita el nombre)" maxlength="40" aria-label="Nombre de la pista">
                 <span class="track-status" id="track2-status">Vacia</span>
               </div>
               <div class="track-mic-row">
                 <span class="track-mic-label">Microfono</span>
                 <select class="input-select" id="track2-mic-device" aria-label="Microfono de la Pista 2">
                   <option value="">Entrada predeterminada</option>
+                </select>
+              </div>
+              <div class="track-mic-row">
+                <span class="track-mic-label">Canal</span>
+                <select class="input-select" id="track2-channel" aria-label="Canal de entrada de la Pista 2">
+                  <option value="1" selected>Canal 1 (izquierdo)</option>
+                  <option value="2">Canal 2 (derecho)</option>
+                  <option value="both">Ambos canales (mezclados)</option>
                 </select>
               </div>
               <div class="track-actions">
@@ -1526,19 +1542,31 @@
         </div>
       </section>
 
+      <!-- Play Todo — Loop + Pistas juntos -->
+      <div class="play-todo-wrap">
+        <span class="play-todo-label">Reproduccion sincronizada</span>
+        <button class="btn btn-play-todo" id="btn-play-todo" type="button" disabled>
+          <svg class="todo-icon" viewBox="0 0 24 24" aria-hidden="true" id="play-todo-icon"><path d="M8 5v14l11-7z"/></svg>
+          <span class="todo-text">
+            <span class="todo-title" id="play-todo-label">Play Loop + Pistas</span>
+            <span class="todo-sub" id="play-todo-sub">Inician juntos al mismo tiempo</span>
+          </span>
+        </button>
+      </div>
+
     </div><!-- /deck -->
 
     <!-- SIDE PANEL -->
     <aside class="side-panel" aria-label="Ajustes">
       <div class="notice" id="mic-error" role="alert"></div>
 
-      <section class="module" aria-label="Entrada de audio">
-        <span class="section-label">Entrada de audio</span>
-        <select class="input-select" id="input-device" aria-label="Dispositivo de entrada">
+      <section class="module" aria-label="Entrada de audio para Loop">
+        <span class="section-label">Entrada de audio para Loop</span>
+        <select class="input-select" id="input-device" aria-label="Dispositivo de entrada del Loop">
           <option value="">Entrada predeterminada</option>
         </select>
-        <span class="input-hint">Elige tu interfaz (ej. UMC22) para grabar desde el canal conectado. Si la lista esta vacia, dale permiso al microfono y vuelve a abrir este menu.</span>
-        <select class="input-select" id="input-channel" aria-label="Canal de entrada">
+        <span class="input-hint">Elige tu interfaz (ej. UMC22) para grabar el Loop desde el canal conectado. Esta entrada solo se usa para grabar el Loop; cada pista de grabacion tiene su propio microfono y canal. Si la lista esta vacia, dale permiso al microfono y vuelve a abrir este menu.</span>
+        <select class="input-select" id="input-channel" aria-label="Canal de entrada del Loop">
           <option value="1" selected>Canal 1 (izquierdo)</option>
           <option value="2">Canal 2 (derecho)</option>
           <option value="both">Ambos canales (mezclados)</option>
@@ -1715,6 +1743,7 @@ trackIds.forEach(id => {
     downloadWav: document.getElementById(`${id}-download-wav`),
     dlWavIcon:   document.getElementById(`${id}-dl-wav-icon`),
     micSelect:  document.getElementById(`${id}-mic-device`),
+    channelSelect: document.getElementById(`${id}-channel`),
     viewport:    document.getElementById(`${id}-viewport`),
     zoomframe:   document.getElementById(`${id}-zoomframe`),
     zoom:        document.getElementById(`${id}-zoom`),
@@ -1996,12 +2025,13 @@ function waitForWorkletFlush(node, timeoutMs = 400) {
    los dos canales en una sola pista mono (util para mezclar microfono
    y linea directa a la vez), con una leve reduccion de ganancia por
    canal para dejar margen y evitar clipping al sumarlos. */
-function prepareInputRouting(stream) {
+function prepareInputRouting(stream, channelSelectEl) {
   const inputSource = state.audioCtx.createMediaStreamSource(stream);
   const audioTrack = stream.getAudioTracks()[0];
   const settings = audioTrack && audioTrack.getSettings ? audioTrack.getSettings() : {};
   const channelCount = inputSource.channelCount || settings.channelCount || 1;
-  const mode = els.inputChannel ? els.inputChannel.value : "2";
+  const channelEl = channelSelectEl || els.inputChannel;
+  const mode = channelEl ? channelEl.value : "2";
 
   if (channelCount >= 2) {
     const splitter = state.audioCtx.createChannelSplitter(2);
@@ -2038,9 +2068,10 @@ function prepareInputRouting(stream) {
   };
 }
 
-function updateChannelStatus(channelUsed, routing) {
+function updateChannelStatus(channelUsed, routing, channelSelectEl) {
   if (!els.channelStatus) return;
-  if (routing && routing.onlyOneChannel && els.inputChannel && els.inputChannel.value !== "1") {
+  const channelEl = channelSelectEl || els.inputChannel;
+  if (routing && routing.onlyOneChannel && channelEl && channelEl.value !== "1") {
     els.channelStatus.textContent = "Tu interfaz solo entrego 1 canal de entrada (el navegador no concedio estereo): grabando en mono desde ese unico canal. El selector Canal 1/2/Ambos no aplica en este caso.";
     return;
   }
@@ -2380,6 +2411,21 @@ if (els.inputChannel) {
   });
 }
 
+trackIds.forEach(id => {
+  const channelEl = tracksEls[id] && tracksEls[id].channelSelect;
+  if (!channelEl) return;
+  const key = `ayun-input-channel-mode-${id}`;
+  try {
+    const savedChannel = localStorage.getItem(key);
+    if (savedChannel && ["1", "2", "both"].includes(savedChannel)) {
+      channelEl.value = savedChannel;
+    }
+  } catch (e) {}
+  channelEl.addEventListener("change", () => {
+    try { localStorage.setItem(key, channelEl.value); } catch (e) {}
+  });
+});
+
 /* ─── VU METER / OSCILOSCOPIO / ESPECTRO (monitor en tiempo real) ───
    Un solo analizador "activo" alimenta los tres medidores: mientras se
    graba (loop o alguna pista) se usa el analizador de esa fuente para
@@ -2541,10 +2587,10 @@ async function startRecording() {
   stopPlayback();
   stopMetronome(false);
 
-  const routing = prepareInputRouting(state.mediaStream);
+  const routing = prepareInputRouting(state.mediaStream, els.inputChannel);
   state.activeRouting = routing;
   state.recChannelUsed = routing.channelUsed;
-  updateChannelStatus(routing.channelUsed, routing);
+  updateChannelStatus(routing.channelUsed, routing, els.inputChannel);
 
   state.analyser = state.audioCtx.createAnalyser();
   state.analyser.fftSize = 512;
@@ -2631,10 +2677,11 @@ async function startTrackRecording(id) {
   const track = state.tracks[id];
   track.chunks = [];
 
-  const routing = prepareInputRouting(state.mediaStream);
+  const trackChannelEl = tracksEls[id] && tracksEls[id].channelSelect ? tracksEls[id].channelSelect : els.inputChannel;
+  const routing = prepareInputRouting(state.mediaStream, trackChannelEl);
   state.activeRouting = routing;
   state.recChannelUsed = routing.channelUsed;
-  updateChannelStatus(routing.channelUsed, routing);
+  updateChannelStatus(routing.channelUsed, routing, trackChannelEl);
 
   track.analyser = state.audioCtx.createAnalyser();
   track.analyser.fftSize = 512;
@@ -3028,8 +3075,9 @@ function hideTrimHandles(which) {
 }
 
 function updateTrimUI(which) {
-  const trim = which === "loop" ? state.loopTrim : state.tracks[which].trim;
-  const wrap = which === "loop"
+  const isLoop = which === "loop";
+  const trim = isLoop ? state.loopTrim : state.tracks[which].trim;
+  const wrap = isLoop
     ? els.canvas.parentElement
     : tracksEls[which].canvas.parentElement;
   const ww = wrap.clientWidth;
@@ -3048,6 +3096,15 @@ function updateTrimUI(which) {
   const he = document.getElementById(`${which}-handle-end`);
   if (hs) hs.style.left = sx + "px";
   if (he) he.style.left = ex + "px";
+
+  // tiempo exacto (en segundos, 3 decimales) donde se encuentra cada handle
+  const buf = trim.originalBuffer || (isLoop ? state.loopBuffer : state.tracks[which].buffer);
+  const badgeStart = document.getElementById(`${which}-badge-start`);
+  const badgeEnd   = document.getElementById(`${which}-badge-end`);
+  if (buf) {
+    if (badgeStart) badgeStart.textContent = (trim.startRatio * buf.duration).toFixed(3) + "s";
+    if (badgeEnd)   badgeEnd.textContent   = (trim.endRatio   * buf.duration).toFixed(3) + "s";
+  }
 }
 
 function makeDuration(buf, trim) {
@@ -3201,9 +3258,6 @@ function initTrimDrag(which) {
         trim.endRatio = Math.max(ratio, trim.startRatio + MIN_GAP);
       }
 
-      const buf = isLoop ? (state.loopTrim.originalBuffer || state.loopBuffer)
-                         : (state.tracks[which].trim.originalBuffer || state.tracks[which].buffer);
-      badge.textContent = makeDuration(buf, trim);
       updateTrimUI(which);
 
       // redraw waveform to show trim preview
