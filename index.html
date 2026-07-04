@@ -1312,6 +1312,137 @@
     .transport { grid-template-columns: 1fr 1fr 44px 44px 44px; }
     .track-actions { grid-template-columns: 1fr 1fr 36px 36px 36px; }
   }
+
+  /* ================================================================
+     COMPACTACIÓN VERTICAL: que toda la estación quepa en el alto
+     de una pantalla de escritorio, sin scroll de página. El ancho
+     (.shell width) no se toca. Si en pantallas muy bajas algo no
+     alcanza, .deck y .side-panel pueden scrollear internamente
+     (no la página completa).
+     ================================================================ */
+  @media (min-width: 861px) {
+    html, body { height: 100%; overflow: hidden; }
+
+    .shell {
+      height: 100vh;
+      min-height: 0;
+      padding: 8px 0;
+      gap: 6px;
+    }
+
+    .topbar { flex-wrap: nowrap; }
+    .eyebrow { font-size: 9px; }
+    h1 { font-size: clamp(18px, 2vw, 24px); line-height: 1; }
+    .session-pill { min-height: 26px; padding: 0 10px; font-size: 11px; gap: 6px; }
+    .led { width: 7px; height: 7px; }
+
+    .studio { height: 100%; min-height: 0; gap: 8px; }
+
+    .deck, .side-panel {
+      min-height: 0;
+      max-height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .deck { padding: 8px 10px; gap: 5px; }
+    .side-panel { padding: 8px 10px; gap: 5px; }
+
+    .meter-row { gap: 5px; }
+    .meter { padding: 4px 8px; gap: 1px; }
+    .meter-label { font-size: 8px; }
+    .meter-value { font-size: clamp(12px, 1.4vw, 15px); }
+
+    .mid-modules { gap: 6px; padding: 5px 0; margin: 0; }
+    .module { gap: 3px; padding-bottom: 5px; }
+    .section-label { font-size: 8px; }
+
+    .metro-top { gap: 5px; }
+    .metro-toggle { min-height: 20px; padding: 0 6px; font-size: 9px; }
+    .beats { gap: 3px; }
+    .beat-light { width: 6px; height: 6px; }
+    .bpm-row { gap: 4px; }
+    .stepper { width: 20px; min-height: 20px; }
+    .stepper .icon { width: 11px; height: 11px; }
+    #bpm-display { min-height: 20px; font-size: 11px; padding: 0 4px; }
+    .countin-display { font-size: 9px; }
+    .shortcuts { gap: 3px; }
+    kbd { min-height: 16px; padding: 1px 4px; font-size: 8px; }
+
+    .wave-section { gap: 3px; }
+    .hint { font-size: 9px; line-height: 1.2; }
+    .wave-wrap { height: 38px; }
+    .zoom-row { gap: 4px; }
+    .zoom-icon { width: 12px; height: 12px; }
+    .zoom-row .readout { font-size: 8px; min-width: 24px; }
+    .trim-undo-btn { width: 18px; height: 18px; }
+    .trim-undo-btn .icon { width: 11px; height: 11px; }
+    .timeline { height: 2px; }
+
+    .eq-row { gap: 4px; }
+    .eq-band { padding: 3px 4px 2px; gap: 1px; }
+    .eq-label { font-size: 7px; }
+    .eq-readout { font-size: 8px; }
+
+    .transport { gap: 4px; }
+    .btn { font-size: 10px; min-height: 24px; }
+    .btn-main span, .btn-secondary span { font-size: 10px; }
+    .btn-main, .btn-secondary, .icon-btn { min-height: 24px; }
+    .icon { width: 12px; height: 12px; }
+
+    #tracks-stack { gap: 5px !important; }
+    .track-card-inner { padding: 5px; gap: 4px; }
+    .track-head { gap: 6px; }
+    .track-status { font-size: 8px; }
+    .track-name-input { font-size: 11px; }
+    .track-mic-row { gap: 4px; }
+    .track-mic-label { font-size: 7px; }
+    .input-select { min-height: 18px; font-size: 9px; padding: 0 5px; }
+    .track-mic-row .input-select { min-height: 18px; }
+    .track-actions { gap: 3px; }
+    .track-wave-wrap { height: 24px; }
+    .track-wave-empty { font-size: 8px; }
+    .track-zoom-row { padding: 0 5px 5px; }
+    .track-eq-block { padding: 0 5px 5px; }
+
+    .play-todo-wrap { margin: 3px 0; }
+    .play-todo-label { font-size: 7px; margin-bottom: 2px; }
+    .btn-play-todo { min-height: 26px; gap: 5px; }
+    .btn-play-todo .todo-icon { width: 12px; height: 12px; }
+    .btn-play-todo .todo-title { font-size: 10px; }
+    .btn-play-todo .todo-sub { font-size: 7px; }
+
+    .side-panel .module { gap: 4px; padding-bottom: 6px; }
+    .volume-row { gap: 5px; }
+    .input-hint { font-size: 8px; line-height: 1.25; }
+    .vu-wrap { gap: 2px; margin-top: 2px; }
+    .vu-label { font-size: 8px; }
+    .vu-row { gap: 5px; }
+    .vu-meter { height: 6px; }
+    .clip-light { font-size: 7px; padding: 1px 4px; }
+    .vu-db { font-size: 9px; }
+    .scope-wrap { gap: 1px; margin-top: 3px; }
+    .scope-label { font-size: 8px; }
+    .scope-canvas { height: 26px; }
+
+    .session-tools { gap: 4px; }
+    .session-list { gap: 2px; font-size: 9px; }
+    .dynamic-tip { font-size: 9px; }
+    .session-actions { gap: 3px; }
+    .session-action { min-height: 20px; font-size: 8px; padding: 2px 4px; }
+    .session-notes { min-height: 44px; font-size: 10px; padding: 4px 6px; }
+    .autosave-status { font-size: 8px; margin-top: 3px; }
+    .recording-checklist { gap: 2px; }
+    .recording-check { min-height: 18px; font-size: 9px; padding: 2px 5px; }
+    .recording-check input { width: 12px; height: 12px; }
+    .footer-note { font-size: 8px; line-height: 1.3; }
+
+    /* La imagen decorativa de Ayün Dúo se oculta para liberar espacio
+       vertical; el enlace queda visible y funcional. */
+    .ayun-presentation { display: none; }
+    .shell > .ayun-ending { margin-top: 4px !important; }
+    .ayun-site-link { min-height: 22px; font-size: 9px; margin-top: 0; }
+  }
 </style>
 </head>
 <body>
