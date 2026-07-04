@@ -403,7 +403,7 @@
 
   .countin-beats {
     display: grid;
-    grid-template-columns: repeat(4, minmax(24px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(24px, 1fr));
     gap: 7px;
     min-width: 0;
   }
@@ -768,8 +768,8 @@
 
   .metro-top {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 10px;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
     align-items: center;
   }
 
@@ -777,16 +777,39 @@
     background: var(--panel-2);
     color: var(--muted);
     border-radius: var(--radius);
-    padding: 0 12px;
+    padding: 0 8px;
     font-size: 12px;
     font-weight: 700;
     min-height: 36px;
+    width: 66px;
   }
 
   .metro-toggle.on {
     color: var(--green);
     border-color: rgba(143,210,156,.45);
     background: rgba(143,210,156,.08);
+  }
+
+  .beatsbar-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 28px;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .beatsbar-row .stepper { width: 28px; min-height: 28px; }
+  .beatsbar-row .stepper .icon { width: 12px; height: 12px; }
+
+  .beatsbar-display {
+    min-height: 28px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #0e0d0b;
+    color: var(--amber-2);
+    font-family: var(--mono);
+    font-size: 13px;
   }
 
   .beats { display: inline-flex; gap: 5px; align-items: center; }
@@ -1345,8 +1368,12 @@
     .module { gap: 3px; padding-bottom: 5px; }
     .section-label { font-size: 8px; }
 
-    .metro-top { gap: 5px; }
-    .metro-toggle { min-height: 20px; padding: 0 6px; font-size: 9px; }
+    .metro-top { gap: 4px; }
+    .metro-toggle { min-height: 20px; padding: 0 5px; font-size: 9px; width: 44px; }
+    .beatsbar-row { gap: 3px; grid-template-columns: 18px 1fr 18px; }
+    .beatsbar-row .stepper { width: 18px; min-height: 18px; }
+    .beatsbar-row .stepper .icon { width: 9px; height: 9px; }
+    .beatsbar-display { min-height: 18px; font-size: 10px; }
     .beats { gap: 3px; }
     .beat-light { width: 6px; height: 6px; }
     .bpm-row { gap: 4px; }
@@ -1481,6 +1508,15 @@
           <span class="section-label">Metronomo visual</span>
           <div class="metro-top">
             <button class="metro-toggle" id="metro-toggle" type="button" aria-pressed="false">Apagado</button>
+            <div class="beatsbar-row" id="beatsbar-row">
+              <button class="stepper" id="beatsbar-down" type="button" aria-label="Menos pulsos de conteo visual">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v2H5z"></path></svg>
+              </button>
+              <span class="beatsbar-display" id="beatsbar-display" aria-label="Pulsos del conteo visual" aria-live="polite">4</span>
+              <button class="stepper" id="beatsbar-up" type="button" aria-label="Mas pulsos de conteo visual">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"></path></svg>
+              </button>
+            </div>
             <div class="beats" id="beat-lights" aria-hidden="true">
               <span class="beat-light beat1"></span>
               <span class="beat-light"></span>
@@ -1998,6 +2034,7 @@ const state = {
   countInTimer: null,
   countInBeat: 0,
   countInBars: 2,
+  beatsPerBar: 4,
   vuRAF: null,
   activeTarget: null,
   loopZoom: 1,
@@ -2078,6 +2115,10 @@ const els = {
   bpmDown:     document.getElementById("bpm-down"),
   bpmUp:       document.getElementById("bpm-up"),
   beatLights:  document.querySelectorAll(".beat-light"),
+  beatLightsContainer: document.getElementById("beat-lights"),
+  beatsBarDisplay: document.getElementById("beatsbar-display"),
+  beatsBarDown:     document.getElementById("beatsbar-down"),
+  beatsBarUp:       document.getElementById("beatsbar-up"),
   vuFill:           document.getElementById("vu-fill"),
   clipLight:        document.getElementById("clip-light"),
   vuDb:             document.getElementById("vu-db"),
@@ -3895,7 +3936,7 @@ function ensureCountInOverlays() {
         <span class="countin-subtitle">Compas 1 / ${state.countInBars}</span>
       </div>
       <div class="countin-beats">
-        ${[1, 2, 3, 4].map(n => `<span class="countin-beat${n === 1 ? " downbeat" : ""}">${n}</span>`).join("")}
+        ${Array.from({ length: state.beatsPerBar }, (_, i) => i + 1).map(n => `<span class="countin-beat${n === 1 ? " downbeat" : ""}">${n}</span>`).join("")}
       </div>`;
     viewport.appendChild(overlay);
   });
@@ -3908,8 +3949,8 @@ function countInArmedLanes() {
 
 function renderCountInOverlays(beatIndex) {
   ensureCountInOverlays();
-  const bar = Math.floor(beatIndex / 4) + 1;
-  const beat = beatIndex % 4;
+  const bar = Math.floor(beatIndex / state.beatsPerBar) + 1;
+  const beat = beatIndex % state.beatsPerBar;
   const armed = countInArmedLanes();
   document.querySelectorAll(".countin-overlay").forEach(overlay => {
     overlay.classList.add("visible");
@@ -3933,12 +3974,12 @@ function startCountIn(onComplete) {
   state.countInBeat = 0;
   setStatus("countin");
   startVUMeter();
-  const totalBeats = state.countInBars * 4;
+  const totalBeats = state.countInBars * state.beatsPerBar;
   const interval = (60 / state.bpm) * 1000;
   function tick() {
     if (!state.countInActive) return;
     renderCountInOverlays(state.countInBeat);
-    els.beatLights.forEach((l, i) => l.classList.toggle("active", i === state.countInBeat % 4));
+    els.beatLights.forEach((l, i) => l.classList.toggle("active", i === state.countInBeat % state.beatsPerBar));
     state.countInBeat += 1;
     if (state.countInBeat >= totalBeats) {
       state.countInTimer = setTimeout(() => {
@@ -4056,13 +4097,33 @@ function updateVolume() {
   if (state.gainNode) state.gainNode.gain.value = v / 100;
 }
 
+function renderBeatLights() {
+  const container = els.beatLightsContainer;
+  if (!container) return;
+  container.innerHTML = "";
+  for (let i = 0; i < state.beatsPerBar; i++) {
+    const span = document.createElement("span");
+    span.className = "beat-light" + (i === 0 ? " beat1" : "");
+    container.appendChild(span);
+  }
+  els.beatLights = container.querySelectorAll(".beat-light");
+}
+
+function setBeatsPerBar(n) {
+  state.beatsPerBar = Math.max(2, Math.min(8, n));
+  els.beatsBarDisplay.textContent = state.beatsPerBar;
+  renderBeatLights();
+  // El conteo visual (overlay grande) debe reconstruirse con el nuevo numero de pulsos
+  document.querySelectorAll(".countin-overlay").forEach(o => o.remove());
+}
+
 function startMetronome() {
   stopMetronome(false);
   state.beatIndex = 0;
   const interval = (60 / state.bpm) * 1000;
   const tick = () => {
     els.beatLights.forEach((l, i) => l.classList.toggle("active", i === state.beatIndex));
-    state.beatIndex = (state.beatIndex + 1) % 4;
+    state.beatIndex = (state.beatIndex + 1) % state.beatsPerBar;
   };
   tick();
   state.metroTimer = setInterval(tick, interval);
@@ -4750,6 +4811,11 @@ els.metroToggle.addEventListener("click", () => {
 
 els.bpmDown.addEventListener("click", () => { state.bpm = Math.max(40, state.bpm - 1); updateBpm(); });
 els.bpmUp.addEventListener("click",   () => { state.bpm = Math.min(240, state.bpm + 1); updateBpm(); });
+
+els.beatsBarDown.addEventListener("click", () => setBeatsPerBar(state.beatsPerBar - 1));
+els.beatsBarUp.addEventListener("click",   () => setBeatsPerBar(state.beatsPerBar + 1));
+renderBeatLights();
+els.beatsBarDisplay.textContent = state.beatsPerBar;
 
 function updateCountInBars() {
   els.countinBarsDisplay.textContent = `${state.countInBars} compas${state.countInBars === 1 ? "" : "es"}`;
