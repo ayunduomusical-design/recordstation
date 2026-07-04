@@ -919,6 +919,27 @@
   .session-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
   .session-action{min-height:38px;padding:8px 9px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2);color:var(--text);font:600 11px/1.25 var(--sans);cursor:pointer}
   .session-action:hover{border-color:rgba(240,179,90,.45);color:var(--amber-2)}.session-action.danger:hover{border-color:rgba(255,107,95,.55);color:#ffd6d2}
+
+  .folder-status{margin:0;color:var(--soft);font:11px/1.4 var(--mono)}
+
+  .projects-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,9,7,.72);z-index:200;padding:20px;box-sizing:border-box}
+  .projects-modal.visible{display:flex}
+  .projects-modal-panel{width:100%;max-width:460px;max-height:80vh;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .projects-modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .projects-modal-title{color:var(--text);font:600 13px/1.3 var(--sans)}
+  .projects-modal-close{width:28px;min-height:28px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2);color:var(--muted);cursor:pointer}
+  .projects-modal-close:hover{color:var(--amber-2);border-color:rgba(240,179,90,.45)}
+  .projects-modal-list{overflow-y:auto;padding:10px 12px;display:grid;gap:8px}
+  .projects-empty{margin:14px 4px;color:var(--soft);font:12px/1.5 var(--sans)}
+  .project-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2)}
+  .project-row-info{display:grid;gap:2px;min-width:0}
+  .project-row-name{color:var(--text);font:600 12px/1.3 var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .project-row-date{color:var(--soft);font:10px/1.3 var(--mono)}
+  .project-row-actions{display:flex;gap:5px;flex:0 0 auto}
+  .project-row-actions button{min-height:28px;padding:0 8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:#0e0d0b;color:var(--muted);font:600 10px/1.2 var(--sans);cursor:pointer}
+  .project-row-actions .project-open:hover{border-color:rgba(143,210,156,.5);color:var(--green)}
+  .project-row-actions .project-download:hover{border-color:rgba(147,183,255,.5);color:var(--blue)}
+  .project-row-actions .project-delete:hover{border-color:rgba(255,107,95,.55);color:#ffd6d2}
   .session-notes{width:100%;min-height:210px;padding:11px 12px;resize:vertical;border:1px solid var(--line);border-radius:var(--radius-sm);outline:none;background:#0e0d0b;color:var(--text);font:13px/1.55 var(--sans);box-sizing:border-box;transition:border-color .12s,box-shadow .12s}
   .session-notes::placeholder{color:var(--soft)}.session-notes:hover{border-color:var(--line-hi)}.session-notes:focus{border-color:rgba(240,179,90,.55);box-shadow:0 0 0 3px rgba(240,179,90,.08)}
   .autosave-status{display:block;margin-top:7px;color:var(--soft);font:10px/1.3 var(--mono);text-align:right}
@@ -1979,6 +2000,18 @@
           <button class="session-action danger" id="clear-session" type="button">Borrar sesión completa</button>
         </div>
       </section>
+
+      <section class="module session-tools" aria-labelledby="projects-title">
+        <span class="section-label" id="projects-title">Proyectos guardados</span>
+        <div class="session-actions">
+          <button class="session-action" id="save-project-as" type="button">Guardar como nuevo proyecto</button>
+          <button class="session-action" id="open-project" type="button">Abrir proyecto</button>
+          <button class="session-action" id="choose-folder" type="button">Elegir carpeta local</button>
+          <button class="session-action" id="import-project-file" type="button">Importar archivo de proyecto</button>
+        </div>
+        <input type="file" id="import-project-input" accept="application/json,.json,.ayunproj" style="display:none">
+        <p class="folder-status" id="folder-status">Carpeta local: no elegida (se usará descarga manual).</p>
+      </section>
       <section class="module session-tools" aria-labelledby="session-notes-title">
         <span class="section-label" id="session-notes-title">Notas de sesión / letra</span>
         <textarea class="session-notes" id="session-notes" placeholder="Letra, arreglos, ideas y observaciones de la toma…" aria-describedby="session-notes-status"></textarea>
@@ -2004,6 +2037,16 @@
     </aside>
   </section>
 </main>
+
+<div class="projects-modal" id="projects-modal" aria-hidden="true">
+  <div class="projects-modal-panel">
+    <div class="projects-modal-head">
+      <span class="projects-modal-title">Proyectos guardados en este navegador</span>
+      <button type="button" class="projects-modal-close" id="projects-modal-close" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="projects-modal-list" id="projects-modal-list"></div>
+  </div>
+</div>
 
 <script>
 // La mezcla es el resultado de las dos tomas, por eso se presenta al final.
@@ -2130,6 +2173,10 @@ const els = {
   countinBarsDown:    document.getElementById("countin-bars-down"),
   countinBarsUp:      document.getElementById("countin-bars-up"),
   countinNote:        document.getElementById("countin-note"),
+  folderStatus:       document.getElementById("folder-status"),
+  projectsModal:      document.getElementById("projects-modal"),
+  projectsModalList:  document.getElementById("projects-modal-list"),
+  importProjectInput: document.getElementById("import-project-input"),
   loopTrimUndo: document.getElementById("loop-trim-undo"),
   loopTrimRedo: document.getElementById("loop-trim-redo"),
   loopDropzone: document.getElementById("loop-dropzone"),
@@ -4324,19 +4371,68 @@ function storageKey(id) { return `ayun${id.charAt(0).toUpperCase()}${id.slice(1)
 
 const TRACK_DB_NAME = "ayun-station";
 const TRACK_DB_STORE = "tracks";
+const PROJECTS_STORE = "projects";
+const META_STORE = "meta";
 
 function openTrackDB() {
   return new Promise((resolve, reject) => {
     if (!window.indexedDB) { reject(new Error("IndexedDB no disponible")); return; }
-    const request = indexedDB.open(TRACK_DB_NAME, 1);
+    const request = indexedDB.open(TRACK_DB_NAME, 2);
     request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains(TRACK_DB_STORE)) {
-        request.result.createObjectStore(TRACK_DB_STORE);
-      }
+      const db = request.result;
+      if (!db.objectStoreNames.contains(TRACK_DB_STORE)) db.createObjectStore(TRACK_DB_STORE);
+      if (!db.objectStoreNames.contains(PROJECTS_STORE)) db.createObjectStore(PROJECTS_STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(META_STORE)) db.createObjectStore(META_STORE);
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
+}
+
+/* Helpers genericos de IndexedDB, usados por el gestor de proyectos guardados */
+async function idbPut(storeName, value, key) {
+  const db = await openTrackDB();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, "readwrite");
+    if (key !== undefined) tx.objectStore(storeName).put(value, key);
+    else tx.objectStore(storeName).put(value);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function idbGet(storeName, key) {
+  const db = await openTrackDB();
+  const value = await new Promise((resolve, reject) => {
+    const request = db.transaction(storeName, "readonly").objectStore(storeName).get(key);
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return value;
+}
+
+async function idbGetAll(storeName) {
+  const db = await openTrackDB();
+  const value = await new Promise((resolve, reject) => {
+    const request = db.transaction(storeName, "readonly").objectStore(storeName).getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return value;
+}
+
+async function idbDelete(storeName, key) {
+  const db = await openTrackDB();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, "readwrite");
+    tx.objectStore(storeName).delete(key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
 }
 
 async function writeStoredTrack(id, value) {
@@ -4394,8 +4490,37 @@ function saveTrackName(id) {
   try { localStorage.setItem(`${storageKey(id)}Name`, track.name); } catch {}
 }
 
-async function loadTrack(id) {
+async function applyTrackData(id, saved) {
   const track = state.tracks[id];
+  if (!saved || !saved.dataUrl) {
+    track.name = tracksEls[id].nameInput.value;
+    setTrackStatus(id, "empty");
+    return false;
+  }
+  try {
+    if (!(await initAudio())) return false;
+    const ab = dataUrlToArrayBuffer(saved.dataUrl);
+    track.buffer = await state.audioCtx.decodeAudioData(ab);
+    track.dataUrl = saved.dataUrl;
+    track.duration = track.buffer.duration || saved.duration || 0;
+    track.name = saved.name || tracksEls[id].nameInput.value;
+    tracksEls[id].nameInput.value = track.name;
+    buildTrackWaveformData(id);
+    drawTrackWaveform(id);
+    track.trim.startRatio = 0; track.trim.endRatio = 1; track.trim.originalBuffer = null;
+    resetTrimHistory(id);
+    showTrimHandles(id);
+    resetSeek(id);
+    setTrackStatus(id, "ready");
+    return true;
+  } catch {
+    track.name = tracksEls[id].nameInput.value;
+    setTrackStatus(id, "empty");
+    return false;
+  }
+}
+
+async function loadTrack(id) {
   const key = storageKey(id);
   let saved = null;
   try { saved = await readStoredTrack(id); } catch {}
@@ -4409,31 +4534,14 @@ async function loadTrack(id) {
   }
   if (!saved) {
     const savedName = localStorage.getItem(`${key}Name`);
-    if (savedName) { track.name = savedName; tracksEls[id].nameInput.value = savedName; }
-    else track.name = tracksEls[id].nameInput.value;
+    if (savedName) { state.tracks[id].name = savedName; tracksEls[id].nameInput.value = savedName; }
+    else state.tracks[id].name = tracksEls[id].nameInput.value;
     setTrackStatus(id, "empty"); return;
   }
-  try {
-    if (!saved.dataUrl) throw new Error("missing data");
-    if (!(await initAudio())) return;
-    const ab = dataUrlToArrayBuffer(saved.dataUrl);
-    track.buffer = await state.audioCtx.decodeAudioData(ab);
-    track.dataUrl = saved.dataUrl;
-    track.duration = track.buffer.duration || saved.duration || 0;
-    track.name = saved.name || tracksEls[id].nameInput.value;
-    tracksEls[id].nameInput.value = track.name;
-    buildTrackWaveformData(id);
-    drawTrackWaveform(id);
-    track.trim.startRatio = 0; track.trim.endRatio = 1; track.trim.originalBuffer = null;
-  resetTrimHistory(id);
-    showTrimHandles(id);
-    resetSeek(id);
-    setTrackStatus(id, "ready");
-  } catch {
+  const ok = await applyTrackData(id, saved);
+  if (!ok) {
     localStorage.removeItem(key);
     deleteStoredTrack(id).catch(() => {});
-    track.name = tracksEls[id].nameInput.value;
-    setTrackStatus(id, "empty");
   }
 }
 
@@ -4451,6 +4559,43 @@ function dataUrlToArrayBuffer(dataUrl) {
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes.buffer;
+}
+
+function dataUrlToBlob(dataUrl) {
+  const [header, b64 = ""] = dataUrl.split(",");
+  const mimeMatch = /data:(.*?);base64/.exec(header || "");
+  const mime = mimeMatch ? mimeMatch[1] : "audio/wav";
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+async function applyLoopData(saved) {
+  if (!saved || !saved.dataUrl) return false;
+  try {
+    if (!(await initAudio())) return false;
+    if (state.isPlaying) stopPlayback();
+    const ab = dataUrlToArrayBuffer(saved.dataUrl);
+    const buf = await state.audioCtx.decodeAudioData(ab.slice(0));
+    state.loopBuffer = buf;
+    state.loopBlob = dataUrlToBlob(saved.dataUrl);
+    state.loopDuration = buf.duration;
+    if (els.durationVal) els.durationVal.textContent = buf.duration.toFixed(3);
+    if (els.loopName) els.loopName.value = saved.name || els.loopName.value;
+    buildWaveformData();
+    drawWaveform();
+    state.loopTrim.startRatio = 0; state.loopTrim.endRatio = 1; state.loopTrim.originalBuffer = null;
+    resetTrimHistory("loop");
+    showTrimHandles("loop");
+    resetSeek("loop");
+    if (els.btnPlay) els.btnPlay.disabled = false;
+    if (els.btnClear) els.btnClear.disabled = false;
+    if (els.btnDownload) els.btnDownload.disabled = false;
+    if (els.btnDownloadWav) els.btnDownloadWav.disabled = false;
+    setStatus("ready");
+    return true;
+  } catch { return false; }
 }
 
 /* ─── DRAG & DROP DE ARCHIVOS DE AUDIO ─── */
@@ -4977,10 +5122,266 @@ async function clearCompleteSession() {
   showMicError("Sesión completa borrada.");
 }
 
+/* ─── PROYECTOS GUARDADOS (multiples, con nombre, + carpeta local opcional) ─── */
+
+function generateProjectId() {
+  return `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function formatDate(iso) {
+  try { return new Date(iso).toLocaleString(); } catch { return ""; }
+}
+
+async function gatherProjectSnapshot() {
+  const tracksData = {};
+  for (const id of trackIds) {
+    const t = state.tracks[id];
+    if (t.dataUrl) tracksData[id] = { name: t.name, dataUrl: t.dataUrl, duration: t.duration };
+  }
+  if (state.loopBuffer && state.loopBlob) {
+    try {
+      const loopDataUrl = await blobToDataUrl(state.loopBlob);
+      tracksData.loop = { name: els.loopName?.value || "Loop", dataUrl: loopDataUrl, duration: state.loopBuffer.duration || 0 };
+    } catch {}
+  }
+  return {
+    tracks: tracksData,
+    settings: {
+      bpm: state.bpm,
+      beatsPerBar: state.beatsPerBar,
+      countInBars: state.countInBars,
+      volume: els.volume ? Number(els.volume.value) : 80,
+      inputChannel: els.inputChannel?.value || "1",
+      track1Channel: tracksEls.track1?.channelSelect?.value || "1",
+      track2Channel: tracksEls.track2?.channelSelect?.value || "2"
+    }
+  };
+}
+
+async function applyProjectSnapshot(data) {
+  if (!data) return;
+  const tracksData = data.tracks || {};
+  const settings = data.settings || {};
+  if (settings.bpm) { state.bpm = settings.bpm; updateBpm(); }
+  if (settings.beatsPerBar) setBeatsPerBar(settings.beatsPerBar);
+  if (settings.countInBars) { state.countInBars = Math.max(1, Math.min(4, settings.countInBars)); updateCountInBars(); }
+  if (typeof settings.volume === "number" && els.volume) { els.volume.value = settings.volume; updateVolume(); }
+  if (els.inputChannel && settings.inputChannel) els.inputChannel.value = settings.inputChannel;
+  if (tracksEls.track1?.channelSelect && settings.track1Channel) tracksEls.track1.channelSelect.value = settings.track1Channel;
+  if (tracksEls.track2?.channelSelect && settings.track2Channel) tracksEls.track2.channelSelect.value = settings.track2Channel;
+  if (tracksData.loop?.dataUrl) await applyLoopData(tracksData.loop);
+  for (const id of trackIds) {
+    if (tracksData[id]?.dataUrl) await applyTrackData(id, tracksData[id]);
+  }
+  updateSessionPanel(); updatePlayTodoBtn();
+}
+
+async function saveProjectEntry(name, id) {
+  const snapshot = await gatherProjectSnapshot();
+  const entry = { id: id || generateProjectId(), name: name || "Proyecto sin título", savedAt: new Date().toISOString(), ...snapshot };
+  await idbPut(PROJECTS_STORE, entry);
+  await idbPut(META_STORE, entry.id, "lastProjectId");
+  return entry;
+}
+
+async function listProjects() {
+  const list = await idbGetAll(PROJECTS_STORE).catch(() => []);
+  return list.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
+}
+
+async function getProject(id) {
+  return idbGet(PROJECTS_STORE, id).catch(() => null);
+}
+
+async function deleteProjectEntry(id) {
+  await idbDelete(PROJECTS_STORE, id).catch(() => {});
+}
+
+function safeFileName(name) {
+  return (name || "proyecto").replace(/[\\/:*?"<>|]/g, "-").trim() || "proyecto";
+}
+
+function downloadProjectFile(entry) {
+  const blob = new Blob([JSON.stringify(entry)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `${safeFileName(entry.name)}.ayunproj.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+async function writeProjectToFolder(handle, entry) {
+  try {
+    const fileHandle = await handle.getFileHandle(`${safeFileName(entry.name)}.ayunproj.json`, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(entry));
+    await writable.close();
+    return true;
+  } catch { return false; }
+}
+
+function updateFolderStatus(name) {
+  if (!els.folderStatus) return;
+  els.folderStatus.textContent = name
+    ? `Carpeta local: "${name}" (cada guardado también se escribe ahí).`
+    : "Carpeta local: no elegida (se usará descarga manual).";
+}
+
+async function getStoredFolderHandle() {
+  try {
+    const handle = await idbGet(META_STORE, "folderHandle");
+    if (!handle) return null;
+    const perm = await handle.queryPermission({ mode: "readwrite" });
+    if (perm === "granted") return handle;
+    const req = await handle.requestPermission({ mode: "readwrite" });
+    return req === "granted" ? handle : null;
+  } catch { return null; }
+}
+
+async function chooseLocalFolder() {
+  if (!("showDirectoryPicker" in window)) {
+    showMicError("Este navegador no permite elegir una carpeta local (funciona en Chrome/Edge/Opera de computador). Puedes usar Descargar/Importar archivo en su lugar.");
+    return;
+  }
+  try {
+    const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+    await idbPut(META_STORE, handle, "folderHandle");
+    updateFolderStatus(handle.name);
+    showMicError(`Carpeta local elegida: "${handle.name}".`);
+  } catch (e) {
+    if (e?.name !== "AbortError") showMicError("No se pudo elegir la carpeta.");
+  }
+}
+
+async function importProjectFromFile(file) {
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!data || typeof data !== "object") throw new Error("bad file");
+    await applyProjectSnapshot(data);
+    const entry = {
+      id: data.id || generateProjectId(),
+      name: data.name || file.name.replace(/\.ayunproj\.json$|\.json$/i, ""),
+      savedAt: data.savedAt || new Date().toISOString(),
+      tracks: data.tracks || {},
+      settings: data.settings || {}
+    };
+    await idbPut(PROJECTS_STORE, entry);
+    await idbPut(META_STORE, entry.id, "lastProjectId");
+    showMicError(`Proyecto "${entry.name}" importado y cargado.`);
+  } catch {
+    showMicError("No se pudo importar ese archivo de proyecto.");
+  }
+}
+
+async function handleSaveProjectAs() {
+  const defaultName = `Proyecto ${new Date().toLocaleDateString()}`;
+  const name = window.prompt("Nombre del proyecto:", defaultName);
+  if (name === null) return;
+  const finalName = name.trim() || defaultName;
+  const entry = await saveProjectEntry(finalName);
+  const folderHandle = await getStoredFolderHandle();
+  if (folderHandle) {
+    const wrote = await writeProjectToFolder(folderHandle, entry);
+    showMicError(wrote
+      ? `Proyecto "${finalName}" guardado en este navegador y en tu carpeta local.`
+      : `Proyecto "${finalName}" guardado en este navegador (no se pudo escribir en la carpeta elegida).`);
+  } else {
+    showMicError(`Proyecto "${finalName}" guardado en este navegador. Usa "Descargar" si quieres tenerlo como archivo aparte.`);
+  }
+  if (els.projectsModal?.classList.contains("visible")) openProjectsModal();
+}
+
+function renderProjectsList(list) {
+  const container = els.projectsModalList;
+  if (!container) return;
+  if (!list.length) {
+    container.innerHTML = `<p class="projects-empty">Todavía no hay proyectos guardados en este navegador. Usa "Guardar como nuevo proyecto" o "Importar archivo de proyecto".</p>`;
+    return;
+  }
+  container.innerHTML = list.map(p => `
+    <div class="project-row">
+      <div class="project-row-info">
+        <span class="project-row-name">${escapeHtml(p.name)}</span>
+        <span class="project-row-date">${escapeHtml(formatDate(p.savedAt))}</span>
+      </div>
+      <div class="project-row-actions">
+        <button type="button" class="project-open" data-id="${p.id}">Abrir</button>
+        <button type="button" class="project-download" data-id="${p.id}">Descargar</button>
+        <button type="button" class="project-delete" data-id="${p.id}">Eliminar</button>
+      </div>
+    </div>`).join("");
+}
+
+async function openProjectsModal() {
+  const list = await listProjects();
+  renderProjectsList(list);
+  els.projectsModal?.classList.add("visible");
+  els.projectsModal?.setAttribute("aria-hidden", "false");
+}
+
+function closeProjectsModal() {
+  els.projectsModal?.classList.remove("visible");
+  els.projectsModal?.setAttribute("aria-hidden", "true");
+}
+
 document.getElementById("save-session")?.addEventListener("click", saveSessionProject);
 document.getElementById("recover-session")?.addEventListener("click", recoverSessionProject);
 document.getElementById("export-session")?.addEventListener("click", exportSessionTracks);
 document.getElementById("clear-session")?.addEventListener("click", clearCompleteSession);
+
+document.getElementById("save-project-as")?.addEventListener("click", handleSaveProjectAs);
+document.getElementById("open-project")?.addEventListener("click", openProjectsModal);
+document.getElementById("choose-folder")?.addEventListener("click", chooseLocalFolder);
+document.getElementById("projects-modal-close")?.addEventListener("click", closeProjectsModal);
+els.projectsModal?.addEventListener("click", e => { if (e.target === els.projectsModal) closeProjectsModal(); });
+document.getElementById("import-project-file")?.addEventListener("click", () => els.importProjectInput?.click());
+els.importProjectInput?.addEventListener("change", e => {
+  const file = e.target.files?.[0];
+  if (file) importProjectFromFile(file);
+  e.target.value = "";
+});
+els.projectsModalList?.addEventListener("click", async e => {
+  const btn = e.target.closest("button[data-id]");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  if (btn.classList.contains("project-open")) {
+    const entry = await getProject(id);
+    if (entry) {
+      await applyProjectSnapshot(entry);
+      await idbPut(META_STORE, id, "lastProjectId");
+      showMicError(`Proyecto "${entry.name}" abierto.`);
+      closeProjectsModal();
+    }
+  } else if (btn.classList.contains("project-download")) {
+    const entry = await getProject(id);
+    if (entry) downloadProjectFile(entry);
+  } else if (btn.classList.contains("project-delete")) {
+    if (window.confirm("¿Eliminar este proyecto guardado? Esta acción no se puede deshacer.")) {
+      await deleteProjectEntry(id);
+      openProjectsModal();
+    }
+  }
+});
+
+(async function initProjectsFeature() {
+  if (!("showDirectoryPicker" in window)) {
+    const btn = document.getElementById("choose-folder");
+    if (btn) btn.title = "No disponible en este navegador (funciona en Chrome/Edge/Opera de computador).";
+    updateFolderStatus(null);
+    return;
+  }
+  try {
+    const handle = await idbGet(META_STORE, "folderHandle");
+    updateFolderStatus(handle ? handle.name : null);
+  } catch { updateFolderStatus(null); }
+})();
+
 [els.inputDevice, els.inputChannel, tracksEls.track1?.channelSelect, tracksEls.track2?.channelSelect].filter(Boolean).forEach(el => el.addEventListener("change", updateSessionPanel));
 if (els.vuDb) new MutationObserver(updateDynamicTip).observe(els.vuDb, { childList: true, characterData: true, subtree: true });
 updateSessionPanel(); updateStorageStatus(); updateDynamicTip();
