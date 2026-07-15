@@ -3315,11 +3315,18 @@ function startTrackPlayback(id, when) {
   track.sourceNode = state.audioCtx.createBufferSource();
   track.sourceNode.buffer = track.buffer;
   track.sourceNode.connect(track.eqNodes ? track.eqNodes.input : state.gainNode);
-  track.sourceNode.addEventListener("ended", () => {
-    track.isPlaying = false; track.sourceNode = null;
+  // Guardamos la funcion del "ended" para poder desconectarla si se trata
+  // de una pausa manual (ver stopTrackPlayback) y asi distinguirla de
+  // cuando la pista llega sola hasta el final.
+  track._endedHandler = () => {
+    track.isPlaying = false; track.sourceNode = null; track._endedHandler = null;
+    // Llego al final de forma natural (no fue pausada): el cursor vuelve
+    // al inicio, listo para la proxima reproduccion completa.
+    track.seek = 0;
     setTrackStatus(id, "ready");
     stopTrackPlayhead(id);
-  }, { once: true });
+  };
+  track.sourceNode.addEventListener("ended", track._endedHandler, { once: true });
   const startAt = when || 0;
   track.sourceNode.start(startAt, offset);
   track.playOffset = offset;
@@ -3333,6 +3340,18 @@ function startTrackPlayback(id, when) {
 function stopTrackPlayback(id) {
   const track = state.tracks[id];
   if (track.sourceNode) {
+    // Pausa manual: guardamos el instante exacto en el que va la
+    // reproduccion como nuevo punto de inicio (seek), para que el cursor
+    // se quede ahi y la proxima reproduccion continue desde el mismo lugar
+    // en vez de volver al comienzo.
+    if (track.buffer) {
+      const elapsed = (track.playOffset || 0) + Math.max(0, state.audioCtx.currentTime - track.playStartTime);
+      track.seek = Math.max(0, Math.min(elapsed, track.buffer.duration));
+    }
+    if (track._endedHandler) {
+      track.sourceNode.removeEventListener("ended", track._endedHandler);
+      track._endedHandler = null;
+    }
     try { track.sourceNode.stop(); } catch {}
     track.sourceNode.disconnect(); track.sourceNode = null;
   }
@@ -3402,13 +3421,22 @@ function startPlayback(when) {
 }
 
 function stopPlayback() {
+  // Como el loop se reproduce en bucle infinito (nunca dispara "ended"),
+  // pausar SIEMPRE guarda el punto exacto en el que iba sonando: el cursor
+  // se queda ahi y la proxima reproduccion continua desde el mismo lugar.
+  let pausedRatio = state.loopDuration ? (state.loopSeek || 0) / state.loopDuration : 0;
   if (state.sourceNode) {
+    if (state.loopBuffer && state.loopDuration) {
+      const elapsed = ((state.loopPlayOffset || 0) + Math.max(0, state.audioCtx.currentTime - state.loopStartTime)) % state.loopDuration;
+      state.loopSeek = elapsed;
+      pausedRatio = elapsed / state.loopDuration;
+    }
     try { state.sourceNode.stop(); } catch {}
     state.sourceNode.disconnect(); state.sourceNode = null;
   }
   state.isPlaying = false;
   cancelAnimationFrame(state.playheadRAF);
-  els.playhead.style.width = "0%";
+  els.playhead.style.width = `${pausedRatio * 100}%`;
   if (els.seekBadge) els.seekBadge.classList.remove("visible");
   if (state.loopBuffer) { setStatus("ready"); updateSeekUI("loop"); }
 }
@@ -5158,7 +5186,7 @@ state.voiceRestarting = false;
 
 // Palabras reconocidas como orden de "detener". Se compara sin tildes y en
 // minusculas, asi que cubre variantes como "Detener!", "para", "Alto." etc.
-const VOICE_STOP_WORDS = ["detener", "deten", "para", "parar", "alto", "stop", "corta", "corte"];
+const VOICE_STOP_WORDS = ["detener", "deten", "para", "parar", "alto", "stop", "corta", "corte", "pausa", "pausar"];
 
 function normalizeVoicePhrase(txt) {
   return txt
@@ -5170,7 +5198,10 @@ function normalizeVoicePhrase(txt) {
 
 /* Frena lo que sea que este grabando en este momento (loop, pista individual
    o grabacion dual), reutilizando la misma logica que ya usa la barra
-   espaciadora y los botones de "Detener" de cada pista. */
+   espaciadora y los botones de "Detener" de cada pista. Si nada se esta
+   grabando pero algo se esta reproduciendo, lo pausa: el cursor se queda
+   exactamente donde iba sonando (no vuelve al inicio) y la proxima
+   reproduccion continua desde ahi. */
 async function stopWhateverIsRecording() {
   if (state.multiTrackRecording || (state.countInActive && state.activeTarget === "mix")) {
     await stopDualTrackRecording();
@@ -5190,7 +5221,12 @@ async function stopWhateverIsRecording() {
       return true;
     }
   }
-  return false;
+  let pausedSomething = false;
+  if (state.isPlaying) { stopPlayback(); pausedSomething = true; }
+  trackIds.forEach(id => {
+    if (state.tracks[id].isPlaying) { stopTrackPlayback(id); pausedSomething = true; }
+  });
+  return pausedSomething;
 }
 
 function showVoiceHeard(text) {
