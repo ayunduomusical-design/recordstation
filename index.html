@@ -134,6 +134,60 @@
   .led.recording{ background: var(--red);   box-shadow: 0 0 20px rgba(255,107,95,.68);  animation: breathe .9s infinite; }
   .led.playing  { background: var(--amber); box-shadow: 0 0 20px rgba(240,179,90,.6);   }
 
+  /* ── COMANDOS DE VOZ ── */
+  .voice-control { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+
+  .voice-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255,255,255,.04);
+    color: var(--muted);
+    font: 600 12px/1.2 var(--sans);
+    cursor: pointer;
+  }
+
+  .voice-toggle:hover { border-color: rgba(240,179,90,.4); color: var(--text); }
+  .voice-toggle .icon { width: 15px; height: 15px; fill: currentColor; flex: 0 0 auto; }
+
+  .voice-toggle.on {
+    border-color: rgba(143,210,156,.5);
+    color: var(--green);
+    background: rgba(143,210,156,.08);
+  }
+
+  .voice-toggle.on .voice-dot {
+    background: var(--green);
+    box-shadow: 0 0 10px rgba(143,210,156,.7);
+    animation: breathe .9s infinite;
+  }
+
+  .voice-toggle.unsupported { opacity: .4; cursor: not-allowed; }
+  .voice-toggle.unsupported:hover { border-color: var(--line); color: var(--muted); }
+
+  .voice-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--soft);
+    flex: 0 0 auto;
+  }
+
+  .voice-heard {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--amber-2);
+    opacity: 0;
+    transition: opacity .2s;
+    white-space: nowrap;
+    padding-right: 4px;
+  }
+
+  .voice-heard.show { opacity: 1; }
+
   @keyframes breathe {
     0%,100% { transform: scale(1); opacity: 1; }
     50%      { transform: scale(.65); opacity: .5; }
@@ -1487,6 +1541,14 @@
       <h1>Estación de grabación</h1>
     </div>
     <div class="topbar-right">
+      <div class="voice-control">
+        <button class="voice-toggle" id="voice-toggle" type="button" aria-pressed="false" title="Di &quot;detener&quot; para frenar cualquier grabacion en curso">
+          <span class="voice-dot" aria-hidden="true"></span>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"></path></svg>
+          <span id="voice-label">Comandos de voz</span>
+        </button>
+        <span class="voice-heard" id="voice-heard" aria-live="polite"></span>
+      </div>
       <div class="session-pill" aria-live="polite">
         <span id="status-led" class="led"></span>
         <span id="status-text">Sin loop</span>
@@ -5072,6 +5134,153 @@ document.addEventListener("keydown", async ev => {
     ev.preventDefault(); clearLoop();
   }
 });
+
+/* ─── COMANDOS DE VOZ ───
+   Permite decir "detener" (o "para" / "alto" / "stop") para frenar CUALQUIER
+   grabacion en curso -sea el loop, la pista 1, la pista 2 o una grabacion
+   dual de ambas pistas a la vez- sin tener que hacer clic en el boton.
+   Usa la Web Speech API nativa del navegador (SpeechRecognition), disponible
+   en Chrome y Edge; no esta soportada en Firefox ni Safari. Importante: este
+   reconocimiento de voz escucha por el microfono por defecto del sistema,
+   que puede ser distinto de la interfaz UMC22 usada para grabar el audio. */
+const voiceEls = {
+  toggle: document.getElementById("voice-toggle"),
+  label:  document.getElementById("voice-label"),
+  heard:  document.getElementById("voice-heard"),
+};
+
+const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+state.voiceActive = false;
+state.voiceRecognition = null;
+state.voiceHeardTimeout = null;
+state.voiceRestarting = false;
+
+// Palabras reconocidas como orden de "detener". Se compara sin tildes y en
+// minusculas, asi que cubre variantes como "Detener!", "para", "Alto." etc.
+const VOICE_STOP_WORDS = ["detener", "deten", "para", "parar", "alto", "stop", "corta", "corte"];
+
+function normalizeVoicePhrase(txt) {
+  return txt
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .trim();
+}
+
+/* Frena lo que sea que este grabando en este momento (loop, pista individual
+   o grabacion dual), reutilizando la misma logica que ya usa la barra
+   espaciadora y los botones de "Detener" de cada pista. */
+async function stopWhateverIsRecording() {
+  if (state.multiTrackRecording || (state.countInActive && state.activeTarget === "mix")) {
+    await stopDualTrackRecording();
+    return true;
+  }
+  if (state.countInActive && state.activeTarget && state.activeTarget !== "main") {
+    await stopTrackRecording(state.activeTarget);
+    return true;
+  }
+  if (state.isRecording || state.countInActive) {
+    await stopRecording();
+    return true;
+  }
+  for (const id of trackIds) {
+    if (state.tracks[id].isRecording) {
+      await stopTrackRecording(id);
+      return true;
+    }
+  }
+  return false;
+}
+
+function showVoiceHeard(text) {
+  if (!voiceEls.heard) return;
+  voiceEls.heard.textContent = `"${text}"`;
+  voiceEls.heard.classList.add("show");
+  clearTimeout(state.voiceHeardTimeout);
+  state.voiceHeardTimeout = setTimeout(() => voiceEls.heard.classList.remove("show"), 2200);
+}
+
+function processVoicePhrase(rawText) {
+  const text = normalizeVoicePhrase(rawText);
+  if (!text) return;
+  const words = text.split(/\s+/);
+  const isStopCommand = words.some(w => VOICE_STOP_WORDS.includes(w));
+  if (isStopCommand) {
+    showVoiceHeard(rawText.trim());
+    stopWhateverIsRecording();
+  }
+}
+
+function setVoiceUI(active) {
+  state.voiceActive = active;
+  if (!voiceEls.toggle) return;
+  voiceEls.toggle.classList.toggle("on", active);
+  voiceEls.toggle.setAttribute("aria-pressed", String(active));
+  if (voiceEls.label) voiceEls.label.textContent = active ? "Escuchando…" : "Comandos de voz";
+}
+
+function startVoiceControl() {
+  if (!SpeechRecognitionCtor || state.voiceRecognition) return;
+  const recog = new SpeechRecognitionCtor();
+  recog.lang = "es-CL";
+  recog.continuous = true;
+  recog.interimResults = false;
+
+  recog.addEventListener("result", ev => {
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const result = ev.results[i];
+      if (result.isFinal) processVoicePhrase(result[0].transcript);
+    }
+  });
+
+  recog.addEventListener("end", () => {
+    // Chrome corta el reconocimiento tras un rato de silencio; si el modo
+    // sigue activado, se reinicia solo para mantener la escucha continua.
+    if (state.voiceActive && state.voiceRecognition === recog) {
+      try { recog.start(); } catch (e) {}
+    }
+  });
+
+  recog.addEventListener("error", ev => {
+    if (ev.error === "no-speech" || ev.error === "audio-capture" || ev.error === "aborted") return;
+    if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
+      showMicError("Permiso de microfono denegado para comandos de voz.");
+      stopVoiceControl();
+    }
+  });
+
+  try {
+    recog.start();
+    state.voiceRecognition = recog;
+    setVoiceUI(true);
+  } catch (e) {
+    state.voiceRecognition = null;
+  }
+}
+
+function stopVoiceControl() {
+  setVoiceUI(false);
+  if (state.voiceRecognition) {
+    const recog = state.voiceRecognition;
+    state.voiceRecognition = null;
+    try { recog.stop(); } catch (e) {}
+  }
+}
+
+if (voiceEls.toggle) {
+  if (!SpeechRecognitionCtor) {
+    voiceEls.toggle.classList.add("unsupported");
+    voiceEls.toggle.disabled = true;
+    if (voiceEls.label) voiceEls.label.textContent = "Voz no disponible";
+    voiceEls.toggle.title = "Tu navegador no soporta comandos de voz (usa Chrome o Edge).";
+  } else {
+    voiceEls.toggle.addEventListener("click", () => {
+      if (state.voiceActive) stopVoiceControl();
+      else startVoiceControl();
+    });
+  }
+}
 
 window.addEventListener("resize", () => {
   resizeCanvas();
