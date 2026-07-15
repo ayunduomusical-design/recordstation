@@ -1542,7 +1542,7 @@
     </div>
     <div class="topbar-right">
       <div class="voice-control">
-        <button class="voice-toggle" id="voice-toggle" type="button" aria-pressed="false" title="Di &quot;detener&quot; para frenar cualquier grabacion en curso">
+        <button class="voice-toggle" id="voice-toggle" type="button" aria-pressed="false" title="Comandos: Detener, Grabar loop / pista 1 / pista 2 / ambas pistas, Reproducir loop / pista 1 / pista 2 / mezcla, Mezclar pistas, Descargar MP3 / WAV de loop, pista 1, pista 2 o mezcla">
           <span class="voice-dot" aria-hidden="true"></span>
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"></path></svg>
           <span id="voice-label">Comandos de voz</span>
@@ -5201,15 +5201,113 @@ function showVoiceHeard(text) {
   state.voiceHeardTimeout = setTimeout(() => voiceEls.heard.classList.remove("show"), 2200);
 }
 
-function processVoicePhrase(rawText) {
-  const text = normalizeVoicePhrase(rawText);
-  if (!text) return;
-  const words = text.split(/\s+/);
-  const isStopCommand = words.some(w => VOICE_STOP_WORDS.includes(w));
-  if (isStopCommand) {
-    showVoiceHeard(rawText.trim());
-    stopWhateverIsRecording();
+/* Interpreta una frase ya transcrita y decide que comando representa.
+   Devuelve null si no coincide con ningun comando reconocido. El orden de
+   los "if" importa: las frases mas especificas (con mas palabras clave)
+   van primero para no confundir, por ejemplo, "reproducir mezcla" con
+   "reproducir pista 1". */
+function parseVoiceCommand(rawText) {
+  let text = normalizeVoicePhrase(rawText);
+  if (!text) return null;
+
+  // Convierte numeros dichos con palabras a digitos, para aceptar tanto
+  // "pista 1" como "pista uno".
+  text = " " + text + " ";
+  text = text.replace(/\b(uno|una|primera|primero)\b/g, "1")
+             .replace(/\b(dos|segunda|segundo)\b/g, "2");
+
+  const words = text.trim().split(/\s+/);
+  const has = w => words.includes(w);
+
+  // 1) DETENER — maxima prioridad, corta cualquier grabacion en curso.
+  if (words.some(w => VOICE_STOP_WORDS.includes(w))) {
+    return { action: "stop" };
   }
+
+  // 2) GRABAR
+  if (has("grabar") || has("graba")) {
+    if (has("ambas") || (has("pistas") && !has("1") && !has("2"))) {
+      return { action: "record", target: "dual" };
+    }
+    if (has("loop")) return { action: "record", target: "loop" };
+    if (has("1")) return { action: "record", target: "track1" };
+    if (has("2")) return { action: "record", target: "track2" };
+  }
+
+  // 3) REPRODUCIR
+  if (has("reproducir") || has("reproduce")) {
+    if (has("loop")) return { action: "play", target: "loop" };
+    if (has("mezcla") || has("mix") || has("mezclar")) return { action: "play", target: "mix" };
+    if (has("1")) return { action: "play", target: "track1" };
+    if (has("2")) return { action: "play", target: "track2" };
+  }
+
+  // 4) MEZCLAR PISTAS (generar la mezcla a partir de pista 1 + pista 2)
+  if (has("mezclar") || has("mesclar") || has("mexclar")) {
+    return { action: "mixdown" };
+  }
+
+  // 5) DESCARGAR (MP3 / WAV) de loop, pista 1, pista 2 o mezcla
+  if (has("descargar") || has("baja") || has("bajar")) {
+    const format = has("wav") ? "wav" : (has("mp3") ? "mp3" : null);
+    if (format) {
+      if (has("loop")) return { action: "download", target: "loop", format };
+      if (has("mix") || has("mezcla")) return { action: "download", target: "mix", format };
+      if (has("1")) return { action: "download", target: "track1", format };
+      if (has("2")) return { action: "download", target: "track2", format };
+    }
+  }
+
+  return null;
+}
+
+/* Ejecuta un comando ya interpretado por parseVoiceCommand, reutilizando
+   siempre las mismas funciones que ya usan los botones y el teclado, para
+   que el comportamiento (validaciones, estados deshabilitados, etc.) sea
+   identico a hacer clic manualmente. */
+async function executeVoiceCommand(cmd) {
+  if (!cmd) return false;
+
+  switch (cmd.action) {
+    case "stop":
+      return await stopWhateverIsRecording();
+
+    case "record":
+      if (cmd.target === "loop") { await startRecording(); }
+      else if (cmd.target === "dual") { await startDualTrackRecording(); }
+      else { await startTrackRecording(cmd.target); }
+      return true;
+
+    case "play":
+      await initAudio();
+      if (cmd.target === "loop") {
+        if (state.loopBuffer && !state.isPlaying) startPlayback();
+      } else {
+        const track = state.tracks[cmd.target];
+        if (track && track.buffer && !track.isPlaying) startTrackPlayback(cmd.target);
+      }
+      return true;
+
+    case "mixdown":
+      await createMixFromTracks();
+      return true;
+
+    case "download":
+      if (cmd.target === "loop") {
+        if (cmd.format === "wav") await downloadLoopWAV(); else await downloadMP3();
+      } else {
+        if (cmd.format === "wav") await downloadTrackWAV(cmd.target); else await downloadTrackMP3(cmd.target);
+      }
+      return true;
+  }
+  return false;
+}
+
+function processVoicePhrase(rawText) {
+  const cmd = parseVoiceCommand(rawText);
+  if (!cmd) return;
+  showVoiceHeard(rawText.trim());
+  executeVoiceCommand(cmd);
 }
 
 function setVoiceUI(active) {
