@@ -3256,11 +3256,16 @@ function startTrackPlayback(id, when) {
   track.sourceNode.addEventListener("ended", () => {
     track.isPlaying = false; track.sourceNode = null;
     setTrackStatus(id, "ready");
+    stopTrackPlayhead(id);
   }, { once: true });
-  track.sourceNode.start(when || 0, offset);
+  const startAt = when || 0;
+  track.sourceNode.start(startAt, offset);
+  track.playOffset = offset;
+  track.playStartTime = startAt > state.audioCtx.currentTime ? startAt : state.audioCtx.currentTime;
   track.isPlaying = true;
   setTrackStatus(id, "playing");
   if (!state.vuRAF) startVUMeter();
+  startTrackPlayhead(id);
 }
 
 function stopTrackPlayback(id) {
@@ -3270,7 +3275,34 @@ function stopTrackPlayback(id) {
     track.sourceNode.disconnect(); track.sourceNode = null;
   }
   track.isPlaying = false;
+  stopTrackPlayhead(id);
   if (track.buffer) setTrackStatus(id, "ready");
+}
+
+/* Cursor de reproduccion animado para una pista (o la mezcla). Avanza en
+   tiempo real mostrando los segundos exactos en los que va la reproduccion. */
+function startTrackPlayhead(id) {
+  const track = state.tracks[id];
+  cancelAnimationFrame(track.playheadRAF);
+  const badgeEl = tracksEls[id].seekBadge;
+  if (badgeEl) badgeEl.classList.add("visible");
+  function tick() {
+    if (!track.isPlaying || !track.buffer) return;
+    const elapsed = (track.playOffset || 0) + Math.max(0, state.audioCtx.currentTime - track.playStartTime);
+    positionPlayCursor(id, elapsed);
+    if (elapsed < track.buffer.duration) {
+      track.playheadRAF = requestAnimationFrame(tick);
+    }
+  }
+  tick();
+}
+
+function stopTrackPlayhead(id) {
+  const track = state.tracks[id];
+  cancelAnimationFrame(track.playheadRAF);
+  const badgeEl = tracksEls[id].seekBadge;
+  if (badgeEl) badgeEl.classList.remove("visible");
+  if (track.buffer) updateSeekUI(id);
 }
 
 function clearTrack(id) {
@@ -3315,7 +3347,8 @@ function stopPlayback() {
   state.isPlaying = false;
   cancelAnimationFrame(state.playheadRAF);
   els.playhead.style.width = "0%";
-  if (state.loopBuffer) setStatus("ready");
+  if (els.seekBadge) els.seekBadge.classList.remove("visible");
+  if (state.loopBuffer) { setStatus("ready"); updateSeekUI("loop"); }
 }
 
 function clearLoop() {
@@ -3338,10 +3371,12 @@ function clearLoop() {
 
 function startPlayhead() {
   cancelAnimationFrame(state.playheadRAF);
+  if (els.seekBadge) els.seekBadge.classList.add("visible");
   function tick() {
     if (!state.isPlaying || !state.loopDuration) return;
     const elapsed = ((state.loopPlayOffset || 0) + Math.max(0, state.audioCtx.currentTime - state.loopStartTime)) % state.loopDuration;
     els.playhead.style.width = `${(elapsed / state.loopDuration) * 100}%`;
+    positionPlayCursor("loop", elapsed);
     state.playheadRAF = requestAnimationFrame(tick);
   }
   tick();
@@ -3645,6 +3680,24 @@ function updateSeekUI(which, opts) {
     badgeEl.textContent = clamped.toFixed(3) + "s";
     if (opts && opts.showBadge) badgeEl.classList.add("visible");
   }
+}
+
+/* Posiciona el cursor verde de reproduccion (y su etiqueta de segundos)
+   en un instante dado, sin tocar el punto de inicio guardado (seek). Se usa
+   para animar el avance del cursor mientras el loop, una pista o la mezcla
+   estan sonando. */
+function positionPlayCursor(which, seconds) {
+  const isLoop = which === "loop";
+  const cursorEl = isLoop ? els.seekCursor : tracksEls[which].seekCursor;
+  const badgeEl  = isLoop ? els.seekBadge  : tracksEls[which].seekBadge;
+  const wrap     = isLoop ? els.canvas.parentElement : tracksEls[which].canvas.parentElement;
+  const buffer   = isLoop ? state.loopBuffer : state.tracks[which].buffer;
+  if (!cursorEl || !buffer) return;
+  const clamped = Math.max(0, Math.min(seconds, buffer.duration));
+  const ratio = buffer.duration ? clamped / buffer.duration : 0;
+  const ww = wrap.clientWidth;
+  cursorEl.style.left = (ratio * ww) + "px";
+  if (badgeEl) badgeEl.textContent = clamped.toFixed(3) + "s";
 }
 
 function resetSeek(which) {
