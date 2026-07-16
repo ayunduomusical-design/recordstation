@@ -521,6 +521,101 @@
   let fadeInterval = null;
   const FADE_DURATION = 3; // seconds
 
+  // ── PERSISTENCIA (IndexedDB) ──
+  // Guarda los archivos de audio (blobs) + nombre + orden, para que el
+  // setlist quede disponible aunque se cierre o recargue la página.
+  const DB_NAME = 'ayun-duo-show-mode';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'songs';
+  let dbPromise = null;
+
+  function openDB() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
+  }
+
+  async function dbPut(record) {
+    try {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(record);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (err) {
+      console.error('No se pudo guardar en IndexedDB:', err);
+    }
+  }
+
+  async function dbDelete(id) {
+    try {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (err) {
+      console.error('No se pudo borrar de IndexedDB:', err);
+    }
+  }
+
+  async function dbClear() {
+    try {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (err) {
+      console.error('No se pudo vaciar IndexedDB:', err);
+    }
+  }
+
+  async function dbGetAll() {
+    try {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (err) {
+      console.error('No se pudo leer IndexedDB:', err);
+      return [];
+    }
+  }
+
+  // Reescribe el campo "order" de todas las canciones según su posición
+  // actual en el array `songs`, y lo persiste.
+  function persistOrder() {
+    songs.forEach((song, idx) => {
+      dbPut({
+        id: song.id,
+        blob: song.file,
+        name: song.name,
+        duration: song.duration,
+        order: idx
+      });
+    });
+  }
+
   // ── DOM ──
   const setlistEl = document.getElementById('setlist');
   const emptyEl = document.getElementById('setlist-empty');
@@ -641,6 +736,7 @@
         currentIndex++;
       }
       renderSetlist();
+      persistOrder();
     }
     return false;
   }
@@ -665,6 +761,13 @@
       if (currentIndex >= 0 && songs[currentIndex]) {
         songs[currentIndex].duration = formatTime(audio.duration);
         renderSetlist();
+        dbPut({
+          id: songs[currentIndex].id,
+          blob: songs[currentIndex].file,
+          name: songs[currentIndex].name,
+          duration: songs[currentIndex].duration,
+          order: currentIndex
+        });
       }
     });
     audio.addEventListener('error', () => {
@@ -780,8 +883,10 @@
       currentIndex--;
     }
     URL.revokeObjectURL(songs[index].url);
+    dbDelete(songs[index].id);
     songs.splice(index, 1);
     renderSetlist();
+    persistOrder();
   }
 
   // ── FILE HANDLING ──
@@ -789,12 +894,20 @@
     const audioFiles = Array.from(fileList).filter(f => f.type.startsWith('audio/'));
     if (audioFiles.length === 0) return;
     audioFiles.forEach(file => {
-      songs.push({
+      const song = {
         id: Date.now() + Math.random(),
         file: file,
         name: file.name.replace(/\.[^/.]+$/, ''),
         duration: null,
         url: URL.createObjectURL(file)
+      };
+      songs.push(song);
+      dbPut({
+        id: song.id,
+        blob: song.file,
+        name: song.name,
+        duration: song.duration,
+        order: songs.length - 1
       });
     });
     renderSetlist();
@@ -803,6 +916,29 @@
       playSong(0);
     }
   }
+
+  // ── CARGA INICIAL DESDE INDEXEDDB ──
+  // Al abrir la página, recupera el setlist guardado (sin autoreproducir,
+  // porque los navegadores bloquean el audio automático sin interacción).
+  async function loadSavedSetlist() {
+    const records = await dbGetAll();
+    if (!records || records.length === 0) return;
+    records.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    records.forEach(rec => {
+      songs.push({
+        id: rec.id,
+        file: rec.blob,
+        name: rec.name,
+        duration: rec.duration || null,
+        url: URL.createObjectURL(rec.blob)
+      });
+    });
+    renderSetlist();
+    if (songs.length > 0) {
+      nowPlayingTitle.textContent = 'Tocá play para empezar';
+    }
+  }
+  loadSavedSetlist();
 
   fileInput.addEventListener('change', (e) => {
     addFiles(e.target.files);
@@ -849,6 +985,7 @@
     currentIndex = -1;
     nowPlayingTitle.textContent = '—';
     renderSetlist();
+    dbClear();
   });
 
   // Keyboard shortcuts
