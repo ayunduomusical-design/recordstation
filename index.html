@@ -1744,6 +1744,12 @@
             <input type="range" id="loop-eq-reverb" min="-100" max="100" step="1" value="0" style="--fill:0%" aria-label="Reverb del loop">
             <span class="eq-readout" id="loop-eq-reverb-readout">0%</span>
           </div>
+        
+          <div class="eq-band">
+            <span class="eq-label">Delay</span>
+            <input type="range" id="loop-eq-delay" min="0" max="100" step="1" value="50" style="--fill:50%" aria-label="Delay del loop">
+            <span class="eq-readout" id="loop-eq-delay-readout">50%</span>
+          </div>
         </div>
       </section>
 
@@ -1877,6 +1883,12 @@
             <input type="range" id="track1-eq-reverb" min="-100" max="100" step="1" value="0" style="--fill:0%" aria-label="Reverb del track1">
             <span class="eq-readout" id="track1-eq-reverb-readout">0%</span>
           </div>
+        
+          <div class="eq-band">
+            <span class="eq-label">Delay</span>
+            <input type="range" id="track1-eq-delay" min="0" max="100" step="1" value="50" style="--fill:50%" aria-label="Delay del track1">
+            <span class="eq-readout" id="track1-eq-delay-readout">50%</span>
+          </div>
         </div>
             </div>
           </div>
@@ -1950,6 +1962,12 @@
             <span class="eq-label">Reverb</span>
             <input type="range" id="mix-eq-reverb" min="-100" max="100" step="1" value="0" style="--fill:0%" aria-label="Reverb del mix">
             <span class="eq-readout" id="mix-eq-reverb-readout">0%</span>
+          </div>
+        
+          <div class="eq-band">
+            <span class="eq-label">Delay</span>
+            <input type="range" id="mix-eq-delay" min="0" max="100" step="1" value="50" style="--fill:50%" aria-label="Delay del mix">
+            <span class="eq-readout" id="mix-eq-delay-readout">50%</span>
           </div>
         </div>
             </div>
@@ -2059,6 +2077,12 @@
             <span class="eq-label">Reverb</span>
             <input type="range" id="track2-eq-reverb" min="-100" max="100" step="1" value="0" style="--fill:0%" aria-label="Reverb del track2">
             <span class="eq-readout" id="track2-eq-reverb-readout">0%</span>
+          </div>
+        
+          <div class="eq-band">
+            <span class="eq-label">Delay</span>
+            <input type="range" id="track2-eq-delay" min="0" max="100" step="1" value="50" style="--fill:50%" aria-label="Delay del track2">
+            <span class="eq-readout" id="track2-eq-delay-readout">50%</span>
           </div>
         </div>
             </div>
@@ -2251,7 +2275,7 @@ const state = {
   recChannelUsed: null,
   loopSeek: 0,
   // Ecualizador de 3 bandas (graves/medios/agudos) — loop
-  loopEqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0 },
+  loopEqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0, delay: 50 },
   loopEQNodes: null,
   masterAnalyser: null,
   tracks: {
@@ -2262,7 +2286,7 @@ const state = {
       waveformData: [], analyser: null, liveRAF: null,
       zoom: 1, seek: 0,
       // Ecualizador de 3 bandas — pista
-      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0 },
+      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0, delay: 50 },
       eqNodes: null
     },
     mix: {
@@ -2271,7 +2295,7 @@ const state = {
       isRecording: false, isPlaying: false, startTime: 0,
       waveformData: [], analyser: null, liveRAF: null,
       zoom: 1, seek: 0,
-      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0 },
+      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0, delay: 50 },
       eqNodes: null
     },
     track2: {
@@ -2281,7 +2305,7 @@ const state = {
       waveformData: [], analyser: null, liveRAF: null,
       zoom: 1, seek: 0,
       // Ecualizador de 3 bandas — pista
-      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0 },
+      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0, delay: 50 },
       eqNodes: null
     }
   }
@@ -2546,8 +2570,15 @@ function bindEqBand(sliderEl, readoutEl, valuesObj, band, getNodes) {
   sliderEl.addEventListener("input", () => {
     const v = Number(sliderEl.value);
     valuesObj[band] = v;
-    const unit = (band === "gain" || band === "reverb") ? "%" : "dB";
-    if (readoutEl) readoutEl.textContent = (v > 0 ? "+" : "") + v + unit;
+    let unit, prefix;
+    if (band === "delay") {
+      unit = "%"; prefix = "";
+    } else if (band === "gain" || band === "reverb") {
+      unit = "%"; prefix = (v > 0 ? "+" : "");
+    } else {
+      unit = "dB"; prefix = (v > 0 ? "+" : "");
+    }
+    if (readoutEl) readoutEl.textContent = prefix + v + unit;
     updateEqFill(sliderEl);
     const nodes = getNodes();
     if (nodes && nodes[band]) nodes[band].gain.value = v;
@@ -2559,10 +2590,11 @@ bindEqBand(document.getElementById("loop-eq-mid"),    document.getElementById("l
 bindEqBand(document.getElementById("loop-eq-treble"), document.getElementById("loop-eq-treble-readout"), state.loopEqValues, "treble", () => state.loopEQNodes);
     bindEqBand(document.getElementById("loop-eq-gain"),   document.getElementById("loop-eq-gain-readout"),   state.loopEqValues, "gain",   () => state.loopEQNodes);
     bindEqBand(document.getElementById("loop-eq-reverb"), document.getElementById("loop-eq-reverb-readout"), state.loopEqValues, "reverb", () => state.loopEQNodes);
+    bindEqBand(document.getElementById("loop-eq-delay"),  document.getElementById("loop-eq-delay-readout"),  state.loopEqValues, "delay",  () => state.loopEQNodes);
 
 trackIds.forEach(id => {
   const track = state.tracks[id];
-  ["bass", "mid", "treble", "gain", "reverb"].forEach(band => {
+  ["bass", "mid", "treble", "gain", "reverb", "delay"].forEach(band => {
     bindEqBand(
       document.getElementById(`${id}-eq-${band}`),
       document.getElementById(`${id}-eq-${band}-readout`),
