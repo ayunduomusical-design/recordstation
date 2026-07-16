@@ -411,33 +411,6 @@
     text-align: right;
   }
 
-  .next-song-btn {
-    display: none;
-    width: 100%;
-    min-height: 44px;
-    margin-top: 14px;
-    border: 1px solid rgba(143,210,156,.35);
-    border-radius: var(--radius);
-    background: rgba(143,210,156,.10);
-    color: var(--green);
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all .15s ease;
-  }
-  .next-song-btn:hover {
-    background: var(--green);
-    color: #08150c;
-    border-color: var(--green);
-  }
-  .next-song-btn .icon { width: 16px; height: 16px; fill: currentColor; }
-  .next-song-btn.visible { display: inline-flex; }
-
   .status-pill {
     display: inline-flex;
     align-items: center;
@@ -534,10 +507,6 @@
       <input type="range" id="volume-slider" min="0" max="100" value="80" style="--fill:80%" aria-label="Volumen">
       <span class="volume-readout" id="volume-readout">80%</span>
     </div>
-    <button class="next-song-btn" id="next-song-btn" type="button">
-      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-      <span>Siguiente canción</span>
-    </button>
     <div class="status-pill">
       <span class="status-led" id="status-led"></span>
       <span id="status-text">Listo</span>
@@ -665,7 +634,6 @@
   const totalTimeEl = document.getElementById('total-time');
   const volumeSlider = document.getElementById('volume-slider');
   const volumeReadout = document.getElementById('volume-readout');
-  const nextSongBtn = document.getElementById('next-song-btn');
   const statusLed = document.getElementById('status-led');
   const statusText = document.getElementById('status-text');
   const clearBtn = document.getElementById('clear-setlist');
@@ -784,10 +752,10 @@
   }
 
   // ── VISUALIZADOR DE ONDA ──
-  // Decodifica el audio con la Web Audio API para obtener su forma de onda real
-  // (picos de amplitud) y la dibuja en el <canvas>. A medida que la canción
-  // avanza, la parte ya reproducida se resalta en ámbar y el resto queda tenue,
-  // como una barra de progreso con la forma real del sonido.
+  // Dibuja la forma de onda COMPLETA de la canción (calculada una sola vez
+  // decodificando el audio) y, mientras suena, un cursor avanza sobre ella
+  // según el progreso de reproducción — la parte ya reproducida queda en
+  // ámbar y el resto tenue, como una onda de estudio con playhead.
   let audioCtx = null;
   let currentPeaks = null;
   let lastProgress = 0;
@@ -802,6 +770,16 @@
     return audioCtx;
   }
 
+  // Soporta tanto la API moderna (promesa) como la antigua (callbacks) de decodeAudioData
+  function decodeAudioDataCompat(ctx, arrayBuffer) {
+    return new Promise((resolve, reject) => {
+      const maybePromise = ctx.decodeAudioData(arrayBuffer.slice(0), resolve, reject);
+      if (maybePromise && typeof maybePromise.then === 'function') {
+        maybePromise.then(resolve).catch(reject);
+      }
+    });
+  }
+
   function resizeVisualizerCanvas() {
     const rect = visualizerCanvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -811,11 +789,12 @@
   }
   window.addEventListener('resize', resizeVisualizerCanvas);
 
-  // Extrae picos de amplitud del archivo de audio (independiente de si está sonando)
-  async function computeWaveformPeaks(file, targetSamples = 320) {
-    const arrayBuffer = await file.arrayBuffer();
+  // Obtiene los picos de amplitud de todo el archivo, a partir de su URL (blob)
+  async function computeWaveformPeaks(url, targetSamples = 320) {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
     const ctx = getAudioCtx();
-    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    const audioBuffer = await decodeAudioDataCompat(ctx, arrayBuffer);
     const raw = audioBuffer.getChannelData(0);
     const blockSize = Math.max(1, Math.floor(raw.length / targetSamples));
     const peaks = new Float32Array(targetSamples);
@@ -847,26 +826,28 @@
     const gap = w * 0.0015;
     const barWidth = Math.max(1, (w / n) - gap);
     const midY = h / 2;
-    const progressIndex = Math.floor((progressFraction || 0) * n);
+    const progress = Math.max(0, Math.min(1, progressFraction || 0));
+    const progressIndex = Math.floor(progress * n);
 
     const playedGrad = visualizerCtx.createLinearGradient(0, h, 0, 0);
     playedGrad.addColorStop(0, '#f0b35a');
     playedGrad.addColorStop(1, '#ffd08a');
 
     for (let i = 0; i < n; i++) {
-      const barHeight = Math.max(h * 0.03, peaks[i] * h * 0.92);
+      const barHeight = Math.max(h * 0.04, peaks[i] * h * 0.9);
       const x = i * (barWidth + gap);
       const y = midY - barHeight / 2;
-      visualizerCtx.fillStyle = i <= progressIndex ? playedGrad : 'rgba(255,255,255,.10)';
+      visualizerCtx.fillStyle = i <= progressIndex ? playedGrad : 'rgba(255,255,255,.12)';
       visualizerCtx.fillRect(x, y, barWidth, barHeight);
     }
 
-    // Línea del cabezal de reproducción
-    if (progressFraction > 0) {
-      const playheadX = Math.min(w - 2, progressIndex * (barWidth + gap));
-      visualizerCtx.fillStyle = '#ffd08a';
-      visualizerCtx.fillRect(playheadX, 0, Math.max(1.5, w * 0.0025), h);
-    }
+    // Cursor de reproducción
+    const playheadX = Math.min(w - 2, progress * w);
+    visualizerCtx.fillStyle = '#ffd08a';
+    visualizerCtx.shadowColor = 'rgba(255,208,138,.7)';
+    visualizerCtx.shadowBlur = w * 0.01;
+    visualizerCtx.fillRect(playheadX, 0, Math.max(2, w * 0.003), h);
+    visualizerCtx.shadowBlur = 0;
   }
 
   async function loadWaveformForSong(song) {
@@ -875,14 +856,14 @@
     if (peaksCache.has(song.id)) {
       currentPeaks = peaksCache.get(song.id);
       visualizerWrap.classList.add('active');
-      drawWaveform(currentPeaks, 0);
+      resizeVisualizerCanvas();
       return;
     }
     currentPeaks = null;
     visualizerWrap.classList.remove('active');
     visualizerIdle.textContent = 'Analizando audio…';
     try {
-      const peaks = await computeWaveformPeaks(song.file);
+      const peaks = await computeWaveformPeaks(song.url);
       if (myGen !== waveformGeneration) return; // el usuario ya cambió de canción
       peaksCache.set(song.id, peaks);
       currentPeaks = peaks;
@@ -890,7 +871,7 @@
       drawWaveform(currentPeaks, lastProgress);
     } catch (err) {
       console.error('No se pudo generar la onda:', err);
-      visualizerIdle.textContent = 'Sin señal';
+      visualizerIdle.textContent = 'No se pudo generar la onda';
     }
   }
 
@@ -905,7 +886,9 @@
     lastProgress = 0;
     visualizerWrap.classList.remove('active');
     visualizerIdle.textContent = 'Sin señal';
-    visualizerCtx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+    if (visualizerCtx) {
+      visualizerCtx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+    }
   }
 
   // ── AUDIO PLAYER ──
@@ -939,8 +922,24 @@
     });
   }
 
+  // Crea/reanuda el AudioContext EN EL MISMO INSTANTE del gesto del usuario
+  // (clic). Si se hace después de un await, algunos navegadores (Safari,
+  // Chrome estricto) ya no lo consideran parte del gesto y lo dejan
+  // suspendido, por eso la onda solo aparecía tras refrescar la página.
+  function unlockAudioContext() {
+    try {
+      const ctx = getAudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+    } catch (err) {
+      console.error('No se pudo inicializar el motor de audio:', err);
+    }
+  }
+
   function playSong(index) {
     if (index < 0 || index >= songs.length) return;
+    unlockAudioContext();
     currentIndex = index;
     const song = songs[index];
     createAudio(song.url);
@@ -950,7 +949,6 @@
       setPlayIcon(true);
       playPauseBtn.disabled = false;
       stopBtn.disabled = false;
-      nextSongBtn.classList.remove('visible');
       updateStatus('playing');
       renderSetlist();
       loadWaveformForSong(song);
@@ -961,6 +959,7 @@
 
   function togglePlayPause() {
     if (!audio) return;
+    unlockAudioContext();
     if (isPlaying) {
       audio.pause();
       isPlaying = false;
@@ -985,7 +984,6 @@
     progressFill.style.width = '0%';
     currentTimeEl.textContent = '0:00';
     updateStatus('ready');
-    nextSongBtn.classList.remove('visible');
     renderSetlist();
     resetVisualizer();
   }
@@ -1015,15 +1013,9 @@
     progressFill.style.width = pct + '%';
     currentTimeEl.textContent = formatTime(audio.currentTime);
     updateWaveformProgress(fraction || 0);
-    // Show next song button when near end (last 5 seconds)
-    const remaining = audio.duration - audio.currentTime;
-    if (remaining <= 5 && remaining > 0) {
-      nextSongBtn.classList.add('visible');
-    }
   }
 
   function onSongEnded() {
-    nextSongBtn.classList.remove('visible');
     if (currentIndex + 1 < songs.length) {
       // Auto-play next song
       playSong(currentIndex + 1);
@@ -1130,7 +1122,6 @@
   // ── CONTROLS ──
   playPauseBtn.addEventListener('click', togglePlayPause);
   stopBtn.addEventListener('click', stopPlayback);
-  nextSongBtn.addEventListener('click', playNextSong);
 
   volumeSlider.addEventListener('input', () => {
     const v = Number(volumeSlider.value);
@@ -1145,6 +1136,14 @@
     const pct = (e.clientX - rect.left) / rect.width;
     audio.currentTime = pct * audio.duration;
   });
+
+  visualizerCanvas.addEventListener('click', (e) => {
+    if (!audio || !audio.duration || !currentPeaks) return;
+    const rect = visualizerCanvas.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    audio.currentTime = pct * audio.duration;
+  });
+  visualizerCanvas.style.cursor = 'pointer';
 
   clearBtn.addEventListener('click', () => {
     stopPlayback();
