@@ -282,6 +282,36 @@
     white-space: nowrap;
   }
 
+  .visualizer-wrap {
+    position: relative;
+    width: 100%;
+    height: 96px;
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: radial-gradient(circle at 50% 120%, rgba(240,179,90,.07), transparent 60%), #0c0b0a;
+    overflow: hidden;
+  }
+  #visualizer-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .visualizer-idle {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--soft);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    pointer-events: none;
+    transition: opacity .2s ease;
+  }
+  .visualizer-wrap.active .visualizer-idle { opacity: 0; }
+
   .player-controls {
     display: grid;
     grid-template-columns: auto 1fr auto;
@@ -478,6 +508,10 @@
       <span class="now-playing-label">Reproduciendo</span>
       <div class="now-playing-title" id="now-playing-title">—</div>
     </div>
+    <div class="visualizer-wrap" id="visualizer-wrap">
+      <canvas id="visualizer-canvas"></canvas>
+      <div class="visualizer-idle" id="visualizer-idle">Sin señal</div>
+    </div>
     <div class="player-controls">
       <button class="play-btn" id="play-pause-btn" type="button" disabled title="Play / Pause">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" id="play-icon-svg"><path d="M8 5v14l11-7z"/></svg>
@@ -635,6 +669,10 @@
   const statusLed = document.getElementById('status-led');
   const statusText = document.getElementById('status-text');
   const clearBtn = document.getElementById('clear-setlist');
+  const visualizerWrap = document.getElementById('visualizer-wrap');
+  const visualizerCanvas = document.getElementById('visualizer-canvas');
+  const visualizerCtx = visualizerCanvas.getContext('2d');
+  const visualizerIdle = document.getElementById('visualizer-idle');
 
   // ── HELPERS ──
   function formatTime(sec) {
@@ -745,6 +783,131 @@
     dragSrcEl = null;
   }
 
+  // ── VISUALIZADOR DE ONDA ──
+  // Decodifica el audio con la Web Audio API para obtener su forma de onda real
+  // (picos de amplitud) y la dibuja en el <canvas>. A medida que la canción
+  // avanza, la parte ya reproducida se resalta en ámbar y el resto queda tenue,
+  // como una barra de progreso con la forma real del sonido.
+  let audioCtx = null;
+  let currentPeaks = null;
+  let lastProgress = 0;
+  let waveformGeneration = 0;
+  const peaksCache = new Map(); // song.id -> Float32Array de picos normalizados
+
+  function getAudioCtx() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+    }
+    return audioCtx;
+  }
+
+  function resizeVisualizerCanvas() {
+    const rect = visualizerCanvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    visualizerCanvas.width = Math.max(1, Math.round(rect.width * dpr));
+    visualizerCanvas.height = Math.max(1, Math.round(rect.height * dpr));
+    drawWaveform(currentPeaks, lastProgress);
+  }
+  window.addEventListener('resize', resizeVisualizerCanvas);
+
+  // Extrae picos de amplitud del archivo de audio (independiente de si está sonando)
+  async function computeWaveformPeaks(file, targetSamples = 320) {
+    const arrayBuffer = await file.arrayBuffer();
+    const ctx = getAudioCtx();
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    const raw = audioBuffer.getChannelData(0);
+    const blockSize = Math.max(1, Math.floor(raw.length / targetSamples));
+    const peaks = new Float32Array(targetSamples);
+    for (let i = 0; i < targetSamples; i++) {
+      const start = i * blockSize;
+      const end = Math.min(raw.length, start + blockSize);
+      let max = 0;
+      for (let j = start; j < end; j++) {
+        const v = Math.abs(raw[j]);
+        if (v > max) max = v;
+      }
+      peaks[i] = max;
+    }
+    let globalMax = 0;
+    for (let i = 0; i < peaks.length; i++) if (peaks[i] > globalMax) globalMax = peaks[i];
+    if (globalMax > 0) {
+      for (let i = 0; i < peaks.length; i++) peaks[i] = peaks[i] / globalMax;
+    }
+    return peaks;
+  }
+
+  function drawWaveform(peaks, progressFraction) {
+    const w = visualizerCanvas.width;
+    const h = visualizerCanvas.height;
+    visualizerCtx.clearRect(0, 0, w, h);
+    if (!peaks || peaks.length === 0) return;
+
+    const n = peaks.length;
+    const gap = w * 0.0015;
+    const barWidth = Math.max(1, (w / n) - gap);
+    const midY = h / 2;
+    const progressIndex = Math.floor((progressFraction || 0) * n);
+
+    const playedGrad = visualizerCtx.createLinearGradient(0, h, 0, 0);
+    playedGrad.addColorStop(0, '#f0b35a');
+    playedGrad.addColorStop(1, '#ffd08a');
+
+    for (let i = 0; i < n; i++) {
+      const barHeight = Math.max(h * 0.03, peaks[i] * h * 0.92);
+      const x = i * (barWidth + gap);
+      const y = midY - barHeight / 2;
+      visualizerCtx.fillStyle = i <= progressIndex ? playedGrad : 'rgba(255,255,255,.10)';
+      visualizerCtx.fillRect(x, y, barWidth, barHeight);
+    }
+
+    // Línea del cabezal de reproducción
+    if (progressFraction > 0) {
+      const playheadX = Math.min(w - 2, progressIndex * (barWidth + gap));
+      visualizerCtx.fillStyle = '#ffd08a';
+      visualizerCtx.fillRect(playheadX, 0, Math.max(1.5, w * 0.0025), h);
+    }
+  }
+
+  async function loadWaveformForSong(song) {
+    const myGen = ++waveformGeneration;
+    lastProgress = 0;
+    if (peaksCache.has(song.id)) {
+      currentPeaks = peaksCache.get(song.id);
+      visualizerWrap.classList.add('active');
+      drawWaveform(currentPeaks, 0);
+      return;
+    }
+    currentPeaks = null;
+    visualizerWrap.classList.remove('active');
+    visualizerIdle.textContent = 'Analizando audio…';
+    try {
+      const peaks = await computeWaveformPeaks(song.file);
+      if (myGen !== waveformGeneration) return; // el usuario ya cambió de canción
+      peaksCache.set(song.id, peaks);
+      currentPeaks = peaks;
+      visualizerWrap.classList.add('active');
+      drawWaveform(currentPeaks, lastProgress);
+    } catch (err) {
+      console.error('No se pudo generar la onda:', err);
+      visualizerIdle.textContent = 'Sin señal';
+    }
+  }
+
+  function updateWaveformProgress(fraction) {
+    lastProgress = fraction;
+    if (currentPeaks) drawWaveform(currentPeaks, fraction);
+  }
+
+  function resetVisualizer() {
+    waveformGeneration++; // invalida cualquier decodificación pendiente
+    currentPeaks = null;
+    lastProgress = 0;
+    visualizerWrap.classList.remove('active');
+    visualizerIdle.textContent = 'Sin señal';
+    visualizerCtx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+  }
+
   // ── AUDIO PLAYER ──
   function createAudio(url) {
     if (audio) {
@@ -790,6 +953,7 @@
       nextSongBtn.classList.remove('visible');
       updateStatus('playing');
       renderSetlist();
+      loadWaveformForSong(song);
     }).catch(err => {
       console.error('Play error:', err);
     });
@@ -823,6 +987,7 @@
     updateStatus('ready');
     nextSongBtn.classList.remove('visible');
     renderSetlist();
+    resetVisualizer();
   }
 
   function fadeOutAndStop() {
@@ -845,9 +1010,11 @@
 
   function onTimeUpdate() {
     if (!audio) return;
-    const pct = (audio.currentTime / audio.duration) * 100;
+    const fraction = audio.currentTime / audio.duration;
+    const pct = fraction * 100;
     progressFill.style.width = pct + '%';
     currentTimeEl.textContent = formatTime(audio.currentTime);
+    updateWaveformProgress(fraction || 0);
     // Show next song button when near end (last 5 seconds)
     const remaining = audio.duration - audio.currentTime;
     if (remaining <= 5 && remaining > 0) {
@@ -939,6 +1106,7 @@
     }
   }
   loadSavedSetlist();
+  resizeVisualizerCanvas();
 
   fileInput.addEventListener('change', (e) => {
     addFiles(e.target.files);
