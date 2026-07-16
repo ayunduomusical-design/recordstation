@@ -594,6 +594,34 @@
     border-color: var(--blue);
   }
 
+  /* Boton combinado: reproducir una pista mientras se graba la otra */
+  .btn-combo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 38px;
+    margin-top: 8px;
+    border: 1px solid rgba(143,210,156,.30);
+    border-radius: var(--radius);
+    background: rgba(143,210,156,.08);
+    color: var(--green);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform .12s ease, border-color .12s ease, background .12s ease, color .12s ease;
+  }
+
+  .btn-combo .icon { width: 15px; height: 15px; fill: currentColor; flex: 0 0 auto; }
+  .btn-combo span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn-combo:hover:not(:disabled) { background: var(--green); color: #08150c; border-color: var(--green); }
+  .btn-combo:active:not(:disabled) { transform: translateY(1px) scale(.99); }
+  .btn-combo.active { background: var(--green); color: #08150c; border-color: var(--green); }
+  .btn-combo:disabled { opacity: .4; cursor: not-allowed; }
+
   .icon-btn {
     width: 100%;
     min-width: 0;
@@ -770,6 +798,7 @@
   }
 
   .mid-modules .module { padding-bottom: 0; border-bottom: 0; }
+  .mid-modules .module-wide { grid-column: 1 / -1; }
 
   @media (max-width: 720px) {
     .mid-modules { grid-template-columns: 1fr; }
@@ -1626,7 +1655,22 @@
             </button>
           </div>
         </section>
+
+        <section class="module module-wide" aria-label="Compensacion de latencia">
+          <span class="section-label">Compensacion de latencia</span>
+          <div class="bpm-row">
+            <button class="stepper" id="latency-down" type="button" aria-label="Menos milisegundos de compensacion">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v2H5z"></path></svg>
+            </button>
+            <input type="number" id="latency-display" min="-300" max="300" step="1" value="0" aria-label="Compensacion de latencia en milisegundos" aria-live="polite">
+            <button class="stepper" id="latency-up" type="button" aria-label="Mas milisegundos de compensacion">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"></path></svg>
+            </button>
+          </div>
+          <p class="footer-note" id="latency-hint" style="margin-top:6px;">Sin ajuste. Sube el valor si tus grabaciones quedan atrasadas respecto a lo que escuchas.</p>
+        </section>
       </div>
+
 
       <!-- Loop waveform — small (2-row height) -->
       <section class="wave-section" aria-label="Forma de onda del loop">
@@ -1757,6 +1801,10 @@
                   <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
                 </button>
               </div>
+              <button class="btn-combo" id="track1-play-and-record" type="button" disabled title="Escucha la pista 1 mientras grabas la pista 2, ambas empiezan al mismo instante tras la cuenta de entrada">
+                <svg class="icon" id="track1-play-and-record-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+                <span id="track1-play-and-record-label">Reproducir pista 1 y grabar pista 2</span>
+              </button>
             </div>
             <!-- Track mini waveform -->
             <div class="track-wave-wrap" id="track1-viewport">
@@ -1914,6 +1962,10 @@
                   <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
                 </button>
               </div>
+              <button class="btn-combo" id="track2-play-and-record" type="button" disabled title="Escucha la pista 2 mientras grabas la pista 1, ambas empiezan al mismo instante tras la cuenta de entrada">
+                <svg class="icon" id="track2-play-and-record-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+                <span id="track2-play-and-record-label">Reproducir pista 2 y grabar pista 1</span>
+              </button>
             </div>
             <!-- Track mini waveform -->
             <div class="track-wave-wrap" id="track2-viewport">
@@ -2140,6 +2192,7 @@ const state = {
   countInBeat: 0,
   countInBars: 2,
   beatsPerBar: 4,
+  latencyCompensationMs: 0,
   vuRAF: null,
   activeTarget: null,
   loopZoom: 1,
@@ -2235,6 +2288,10 @@ const els = {
   countinBarsDown:    document.getElementById("countin-bars-down"),
   countinBarsUp:      document.getElementById("countin-bars-up"),
   countinNote:        document.getElementById("countin-note"),
+  latencyDisplay:     document.getElementById("latency-display"),
+  latencyDown:        document.getElementById("latency-down"),
+  latencyUp:          document.getElementById("latency-up"),
+  latencyHint:        document.getElementById("latency-hint"),
   folderStatus:       document.getElementById("folder-status"),
   projectsModal:      document.getElementById("projects-modal"),
   projectsModalList:  document.getElementById("projects-modal-list"),
@@ -2715,6 +2772,52 @@ function audioBufferToWav(buffer, bitDepth = 24) {
   return new Blob([arrayBuffer], { type: "audio/wav" });
 }
 
+/* ─── COMPENSACION DE LATENCIA ───
+   Cada interfaz de audio tiene su propio retraso de ida y vuelta (lo que
+   tarda el sonido en salir por los parlantes/audifonos, mas lo que tarda
+   en volver a entrar por el microfono). Esto hace que toda toma grabada
+   mientras se escucha una referencia (el loop, el metronomo, o la otra
+   pista con los botones "Reproducir X y grabar Y") quede desplazada esos
+   milisegundos respecto a lo que en realidad se tocaba. Esta compensacion
+   se aplica, de forma pareja, a TODA grabacion hecha por microfono en el
+   instante en que se cierra la toma: un valor positivo recorta el inicio
+   (adelanta el audio, para compensar una grabacion que llega "tarde"); uno
+   negativo agrega silencio al inicio (la atrasa). */
+function latencyShiftSamples(sampleRate) {
+  const ms = state.latencyCompensationMs || 0;
+  if (!ms) return 0;
+  return Math.round((ms / 1000) * sampleRate);
+}
+
+function shiftFloat32ForLatency(samples, sampleRate) {
+  const shift = latencyShiftSamples(sampleRate);
+  if (!shift) return samples;
+  if (shift > 0) {
+    return shift >= samples.length ? new Float32Array(1) : samples.subarray(shift);
+  }
+  const pad = new Float32Array(samples.length + Math.abs(shift));
+  pad.set(samples, Math.abs(shift));
+  return pad;
+}
+
+function shiftBufferForLatency(buffer) {
+  if (!buffer) return buffer;
+  const shift = latencyShiftSamples(buffer.sampleRate);
+  if (!shift) return buffer;
+  const numChannels = buffer.numberOfChannels;
+  const newLength = shift > 0
+    ? Math.max(1, buffer.length - shift)
+    : buffer.length + Math.abs(shift);
+  const out = state.audioCtx.createBuffer(numChannels, newLength, buffer.sampleRate);
+  for (let c = 0; c < numChannels; c++) {
+    const src = buffer.getChannelData(c);
+    const dst = out.getChannelData(c);
+    if (shift > 0) dst.set(src.subarray(shift));
+    else dst.set(src, Math.abs(shift));
+  }
+  return out;
+}
+
 // Desconecta y limpia todo el grafo de grabacion (worklet/mediaRecorder/splitter/stream)
 function teardownRecordingGraph(targetId) {
   if (state.recWorkletNode) {
@@ -2762,13 +2865,14 @@ async function finalizeCapture(targetId) {
   let buffer, blobForStorage;
 
   if (usedWorklet) {
-    const samples = concatFloat32(chunks);
-    if (!samples.length) {
+    const samplesRaw = concatFloat32(chunks);
+    if (!samplesRaw.length) {
       if (isMain) setStatus(state.loopBuffer ? "ready" : "idle");
       else setTrackStatus(targetId, track.buffer ? "ready" : "empty");
       return;
     }
     const sampleRate = state.audioCtx.sampleRate;
+    const samples = shiftFloat32ForLatency(samplesRaw, sampleRate);
     buffer = state.audioCtx.createBuffer(1, samples.length, sampleRate);
     buffer.copyToChannel(samples, 0);
     blobForStorage = encodeWavMono(samples, sampleRate);
@@ -2783,7 +2887,8 @@ async function finalizeCapture(targetId) {
       else { showMicError(`La pista "${track.name}" no pudo procesarse.`); setTrackStatus(targetId, "empty"); }
       return;
     }
-    blobForStorage = blob;
+    buffer = shiftBufferForLatency(buffer);
+    blobForStorage = state.latencyCompensationMs ? audioBufferToWav(buffer, 16) : blob;
   }
 
   if (isMain) {
@@ -3209,7 +3314,7 @@ async function stopRecording() {
 }
 
 /* ─── TRACK RECORDING (single track) ─── */
-async function startTrackRecording(id) {
+async function startTrackRecording(id, onStarted) {
   if (state.countInActive || state.isRecording || isAnyTrackRecording()) return;
   if (!(await initAudio())) return;
 
@@ -3259,6 +3364,13 @@ async function startTrackRecording(id) {
 
   startCountIn(() => {
     if (state.activeTarget !== id) return;
+    // Instante preciso (reloj del audioContext) en el que arranca la
+    // grabacion de verdad. Se usa para sincronizar con precision de
+    // muestra la reproduccion del boton combinado "Reproducir X y grabar
+    // Y" -antes de que corra cualquier otro codigo (actualizar la
+    // interfaz, dibujar la forma de onda en vivo, el metronomo, etc.) que
+    // podria introducir un pequeño retraso entre ambas.
+    const syncTime = state.audioCtx.currentTime;
     if (workletOk) {
       routing.connectTo(state.recWorkletNode);
       track.isRecording = true;
@@ -3268,6 +3380,12 @@ async function startTrackRecording(id) {
       state.mediaRecorder.start();
       track.isRecording = true;
     }
+    // Si venimos de un boton combinado (reproducir una pista mientras se
+    // graba la otra), este es el instante exacto en que ambas deben
+    // arrancar juntas, justo cuando termina la cuenta de entrada. Se
+    // dispara ANTES de las actualizaciones de interfaz de mas abajo para
+    // que no le sumen retraso a la reproduccion.
+    if (typeof onStarted === "function") onStarted(syncTime);
     setTrackStatus(id, "recording");
     startTrackLiveWaveform(id);
     if (state.metroOn) startMetronome();
@@ -3306,6 +3424,41 @@ async function stopTrackRecording(id) {
   }
 }
 
+/* ─── REPRODUCIR UNA PISTA MIENTRAS SE GRABA LA OTRA ───
+   Boton combinado: reproduce playId desde el inicio y, al mismo tiempo
+   (justo cuando termina la cuenta de entrada), empieza a grabar en
+   recordId. Asi el usuario puede escuchar una pista de referencia mientras
+   graba encima de ella en la otra. Funciona como interruptor: si se pulsa
+   de nuevo mientras esta en marcha, detiene ambas cosas. */
+async function togglePlayAndRecordCombo(playId, recordId) {
+  const recordTrack = state.tracks[recordId];
+  const alreadyRunning = recordTrack.isRecording || (state.countInActive && state.activeTarget === recordId);
+
+  if (alreadyRunning) {
+    await stopTrackRecording(recordId);
+    if (state.tracks[playId].isPlaying) stopTrackPlayback(playId);
+    return;
+  }
+
+  if (state.countInActive || state.isRecording || isAnyTrackRecording()) return;
+
+  const playTrack = state.tracks[playId];
+  if (!playTrack.buffer) {
+    showMicError(`La pista "${playTrack.name}" esta vacia: no hay nada que reproducir.`);
+    return;
+  }
+
+  if (!(await initAudio())) return;
+  if (playTrack.isPlaying) stopTrackPlayback(playId);
+  // Siempre se escucha la pista de referencia completa, desde el principio.
+  playTrack.seek = 0;
+  updateSeekUI(playId);
+
+  await startTrackRecording(recordId, (syncTime) => {
+    startTrackPlayback(playId, syncTime);
+  });
+}
+
 /* ─── TRACK PLAYBACK ─── */
 function startTrackPlayback(id, when) {
   const track = state.tracks[id];
@@ -3327,7 +3480,7 @@ function startTrackPlayback(id, when) {
     stopTrackPlayhead(id);
   };
   track.sourceNode.addEventListener("ended", track._endedHandler, { once: true });
-  const startAt = when || 0;
+  const startAt = (typeof when === "number") ? when : 0;
   track.sourceNode.start(startAt, offset);
   track.playOffset = offset;
   track.playStartTime = startAt > state.audioCtx.currentTime ? startAt : state.audioCtx.currentTime;
@@ -3411,7 +3564,7 @@ function startPlayback(when) {
   state.sourceNode.buffer = state.loopBuffer;
   state.sourceNode.loop = true;
   state.sourceNode.connect(state.loopEQNodes ? state.loopEQNodes.input : state.gainNode);
-  const startAt = when || 0;
+  const startAt = (typeof when === "number") ? when : 0;
   state.sourceNode.start(startAt, offset);
   state.loopStartTime = startAt > state.audioCtx.currentTime ? startAt : state.audioCtx.currentTime;
   state.isPlaying = true;
@@ -4207,6 +4360,7 @@ function setStatus(mode) {
     els.recLabel.textContent = "Cancelar";
     els.btnPlay.disabled = true; els.btnClear.disabled = true;
     els.waveHint.textContent = `Cuenta visual de ${state.countInBars} compas${state.countInBars === 1 ? "" : "es"}.`;
+    if (typeof updateComboButtons === "function") updateComboButtons();
     return;
   }
   if (mode === "recording") {
@@ -4215,6 +4369,7 @@ function setStatus(mode) {
     els.recLabel.textContent = "Detener";
     els.btnPlay.disabled = true; els.btnClear.disabled = true;
     els.waveHint.textContent = "Capturando desde el tercer compas.";
+    if (typeof updateComboButtons === "function") updateComboButtons();
     return;
   }
   if (mode === "playing") {
@@ -4224,6 +4379,7 @@ function setStatus(mode) {
     els.playLabel.textContent = "Detener";
     els.btnRecord.disabled = false;
     els.waveHint.textContent = "Loop activo.";
+    if (typeof updateComboButtons === "function") updateComboButtons();
     return;
   }
   if (state.loopBuffer) {
@@ -4240,6 +4396,7 @@ function setStatus(mode) {
   els.playLabel.textContent = "Reproducir";
   els.btnRecord.disabled = false;
   if (typeof updatePlayTodoBtn === "function") updatePlayTodoBtn();
+  if (typeof updateComboButtons === "function") updateComboButtons();
 }
 
 function setTrackStatus(id, mode) {
@@ -4253,17 +4410,23 @@ function setTrackStatus(id, mode) {
   if (mode === "countin") {
     e.status.textContent = `Cuenta ${state.countInBars} compas${state.countInBars === 1 ? "" : "es"}`;
     e.recLabel.textContent = "Cancelar";
-    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true; return;
+    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
+    if (typeof updateComboButtons === "function") updateComboButtons();
+    return;
   }
   if (mode === "recording") {
     e.status.textContent = id === "mix" ? "Grabando ambas" : "Grabando";
     e.recLabel.textContent = "Detener";
-    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true; return;
+    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
+    if (typeof updateComboButtons === "function") updateComboButtons();
+    return;
   }
   if (mode === "playing") {
     e.status.textContent = "Reproduciendo";
     e.recLabel.textContent = "Grabar"; e.playLabel.textContent = "Pausa";
-    e.play.disabled = false; e.clear.disabled = false; return;
+    e.play.disabled = false; e.clear.disabled = false;
+    if (typeof updateComboButtons === "function") updateComboButtons();
+    return;
   }
   if (track.buffer) {
     e.status.textContent = `${track.duration.toFixed(3)}s`;
@@ -4276,6 +4439,7 @@ function setTrackStatus(id, mode) {
   e.playLabel.textContent = id === "mix" ? "Reproducir mezcla" : "Play";
   if (typeof updateMixButton === "function") updateMixButton();
   if (typeof updatePlayTodoBtn === "function") updatePlayTodoBtn();
+  if (typeof updateComboButtons === "function") updateComboButtons();
 }
 
 /* ─── VOLUME / METRONOME / BPM ─── */
@@ -4836,11 +5000,32 @@ function updateMixButton() {
   e.mixButton.disabled = !(state.tracks.track1.buffer && state.tracks.track2.buffer) || !!state.multiTrackRecording;
 }
 
+/* Habilita/deshabilita los botones "Reproducir pista X y grabar pista Y":
+   necesitan que la pista a reproducir tenga audio, y que no haya ninguna
+   otra grabacion o cuenta de entrada en curso en ningun lado de la app. */
+function updateComboButtons() {
+  const btn1 = document.getElementById("track1-play-and-record");
+  const btn2 = document.getElementById("track2-play-and-record");
+  const busyElsewhere = state.countInActive || state.isRecording || state.multiTrackRecording ||
+    trackIds.some(id => state.tracks[id].isRecording);
+  if (btn1) {
+    const runningHere = state.tracks.track2.isRecording || (state.countInActive && state.activeTarget === "track2");
+    btn1.disabled = !state.tracks.track1.buffer || (busyElsewhere && !runningHere);
+    btn1.classList.toggle("active", runningHere);
+  }
+  if (btn2) {
+    const runningHere = state.tracks.track1.isRecording || (state.countInActive && state.activeTarget === "track1");
+    btn2.disabled = !state.tracks.track2.buffer || (busyElsewhere && !runningHere);
+    btn2.classList.toggle("active", runningHere);
+  }
+}
+
 function floatChunksToTrackBuffer(id, chunks) {
   const track = state.tracks[id];
-  const samples = concatFloat32(chunks || []);
-  if (!samples.length) return false;
+  const samplesRaw = concatFloat32(chunks || []);
+  if (!samplesRaw.length) return false;
   const sampleRate = state.audioCtx.sampleRate;
+  const samples = shiftFloat32ForLatency(samplesRaw, sampleRate);
   const buffer = state.audioCtx.createBuffer(1, samples.length, sampleRate);
   buffer.copyToChannel(samples, 0);
   track.buffer = buffer;
@@ -5018,6 +5203,18 @@ trackIds.forEach(id => {
   e.downloadWav?.addEventListener("click", () => downloadTrackWAV(id));
 });
 
+/* Botones "Reproducir pista 1 y grabar pista 2" / "Reproducir pista 2 y
+   grabar pista 1": cada uno reproduce la pista contraria mientras graba en
+   la propia, ambas cosas arrancando juntas al terminar la cuenta de
+   entrada. */
+document.getElementById("track1-play-and-record")?.addEventListener("click", () => {
+  togglePlayAndRecordCombo("track1", "track2");
+});
+document.getElementById("track2-play-and-record")?.addEventListener("click", () => {
+  togglePlayAndRecordCombo("track2", "track1");
+});
+updateComboButtons();
+
 /* ─── PLAY TODO (loop + pista al mismo tiempo, sincronizados por audioCtx.currentTime) ─── */
 const elsBtnPlayTodo = document.getElementById("btn-play-todo");
 const elsTodoIcon    = document.getElementById("play-todo-icon");
@@ -5120,6 +5317,53 @@ els.countinBarsUp.addEventListener("click", () => {
   updateCountInBars();
 });
 updateCountInBars();
+
+/* ─── COMPENSACION DE LATENCIA ───
+   Valor en milisegundos que se recuerda entre sesiones (calibrar la
+   interfaz de audio es algo que normalmente se hace una sola vez). */
+const LATENCY_STORAGE_KEY = "ayun-latency-compensation-ms";
+try {
+  const savedLatency = localStorage.getItem(LATENCY_STORAGE_KEY);
+  if (savedLatency !== null) {
+    const parsed = Number(savedLatency);
+    if (!isNaN(parsed)) state.latencyCompensationMs = Math.max(-300, Math.min(300, Math.round(parsed)));
+  }
+} catch (e) {}
+
+function updateLatencyUI() {
+  if (els.latencyDisplay) els.latencyDisplay.value = state.latencyCompensationMs;
+  if (els.latencyHint) {
+    const ms = state.latencyCompensationMs;
+    if (ms === 0) {
+      els.latencyHint.textContent = "Sin ajuste. Sube el valor si tus grabaciones quedan atrasadas respecto a lo que escuchas.";
+    } else if (ms > 0) {
+      els.latencyHint.textContent = `Cada grabacion se adelanta ${ms} ms (recorta el inicio) para compensar el retraso de tu interfaz.`;
+    } else {
+      els.latencyHint.textContent = `Cada grabacion se atrasa ${Math.abs(ms)} ms (agrega silencio al inicio).`;
+    }
+  }
+  try { localStorage.setItem(LATENCY_STORAGE_KEY, String(state.latencyCompensationMs)); } catch (e) {}
+}
+
+function setLatencyCompensation(ms) {
+  state.latencyCompensationMs = Math.max(-300, Math.min(300, Math.round(ms)));
+  updateLatencyUI();
+}
+
+if (els.latencyDown) els.latencyDown.addEventListener("click", () => setLatencyCompensation(state.latencyCompensationMs - 5));
+if (els.latencyUp)   els.latencyUp.addEventListener("click",   () => setLatencyCompensation(state.latencyCompensationMs + 5));
+
+if (els.latencyDisplay) {
+  els.latencyDisplay.addEventListener("input", () => {
+    const v = parseInt(els.latencyDisplay.value, 10);
+    if (!isNaN(v)) setLatencyCompensation(v);
+  });
+  els.latencyDisplay.addEventListener("blur", () => updateLatencyUI());
+  els.latencyDisplay.addEventListener("keydown", ev => {
+    if (ev.key === "Enter") els.latencyDisplay.blur();
+  });
+}
+updateLatencyUI();
 
 els.bpmDisplay.addEventListener("input", () => {
   const v = parseInt(els.bpmDisplay.value, 10);
@@ -5553,7 +5797,8 @@ async function gatherProjectSnapshot() {
       volume: els.volume ? Number(els.volume.value) : 80,
       inputChannel: els.inputChannel?.value || "1",
       track1Channel: tracksEls.track1?.channelSelect?.value || "1",
-      track2Channel: tracksEls.track2?.channelSelect?.value || "2"
+      track2Channel: tracksEls.track2?.channelSelect?.value || "2",
+      latencyCompensationMs: state.latencyCompensationMs
     }
   };
 }
@@ -5569,6 +5814,9 @@ async function applyProjectSnapshot(data) {
   if (els.inputChannel && settings.inputChannel) els.inputChannel.value = settings.inputChannel;
   if (tracksEls.track1?.channelSelect && settings.track1Channel) tracksEls.track1.channelSelect.value = settings.track1Channel;
   if (tracksEls.track2?.channelSelect && settings.track2Channel) tracksEls.track2.channelSelect.value = settings.track2Channel;
+  if (typeof settings.latencyCompensationMs === "number" && typeof setLatencyCompensation === "function") {
+    setLatencyCompensation(settings.latencyCompensationMs);
+  }
   if (tracksData.loop?.dataUrl) await applyLoopData(tracksData.loop);
   for (const id of trackIds) {
     if (tracksData[id]?.dataUrl) await applyTrackData(id, tracksData[id]);
