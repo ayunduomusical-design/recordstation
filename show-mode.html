@@ -699,7 +699,7 @@
       // Click to play
       li.addEventListener('click', (e) => {
         if (e.target.closest('.item-remove')) return;
-        playSong(idx);
+        selectSong(idx);
       });
       setlistEl.appendChild(li);
     });
@@ -790,9 +790,17 @@
   window.addEventListener('resize', resizeVisualizerCanvas);
 
   // Obtiene los picos de amplitud de todo el archivo, a partir de su URL (blob)
-  async function computeWaveformPeaks(url, targetSamples = 320) {
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
+  async function computeWaveformPeaks(source, targetSamples = 320) {
+    // Usar directamente el File/Blob es más fiable que volver a solicitar
+    // la URL temporal con fetch, especialmente justo después de agregarlo.
+    let arrayBuffer;
+    if (source && typeof source.arrayBuffer === 'function') {
+      arrayBuffer = await source.arrayBuffer();
+    } else {
+      const response = await fetch(source);
+      if (!response.ok) throw new Error('No se pudo leer el archivo de audio');
+      arrayBuffer = await response.arrayBuffer();
+    }
     const ctx = getAudioCtx();
     const audioBuffer = await decodeAudioDataCompat(ctx, arrayBuffer);
     const raw = audioBuffer.getChannelData(0);
@@ -863,7 +871,7 @@
     visualizerWrap.classList.remove('active');
     visualizerIdle.textContent = 'Analizando audio…';
     try {
-      const peaks = await computeWaveformPeaks(song.url);
+      const peaks = await computeWaveformPeaks(song.file || song.url);
       if (myGen !== waveformGeneration) return; // el usuario ya cambió de canción
       peaksCache.set(song.id, peaks);
       currentPeaks = peaks;
@@ -937,6 +945,32 @@
     }
   }
 
+  // Selecciona una canción y la deja lista para reproducir: crea el audio
+  // (en pausa) y dispara la carga de la onda inmediatamente. NO inicia la
+  // reproducción — eso solo ocurre cuando el usuario toca el botón de play.
+  function selectSong(index) {
+    if (index < 0 || index >= songs.length) return;
+    unlockAudioContext();
+    currentIndex = index;
+    const song = songs[index];
+    createAudio(song.url);
+    nowPlayingTitle.textContent = song.name;
+
+    // La onda comienza a cargarse inmediatamente al seleccionar la canción,
+    // sin esperar a que arranque la reproducción.
+    loadWaveformForSong(song);
+
+    isPlaying = false;
+    setPlayIcon(false);
+    playPauseBtn.disabled = false;
+    stopBtn.disabled = false;
+    updateStatus('ready');
+    renderSetlist();
+  }
+
+  // Selecciona una canción Y la reproduce de inmediato. Se usa solo para el
+  // avance automático al terminar un tema (o el atajo de teclado siguiente),
+  // nunca al simplemente elegir una canción de la lista.
   function playSong(index) {
     if (index < 0 || index >= songs.length) return;
     unlockAudioContext();
@@ -944,6 +978,8 @@
     const song = songs[index];
     createAudio(song.url);
     nowPlayingTitle.textContent = song.name;
+    loadWaveformForSong(song);
+
     audio.play().then(() => {
       isPlaying = true;
       setPlayIcon(true);
@@ -951,7 +987,6 @@
       stopBtn.disabled = false;
       updateStatus('playing');
       renderSetlist();
-      loadWaveformForSong(song);
     }).catch(err => {
       console.error('Play error:', err);
     });
@@ -966,6 +1001,11 @@
       setPlayIcon(false);
       updateStatus('paused');
     } else {
+      // Si la onda fue limpiada o todavía no terminó de generarse,
+      // recuperarla al reanudar sin exigir recargar la página.
+      if (currentIndex >= 0 && songs[currentIndex] && !currentPeaks) {
+        loadWaveformForSong(songs[currentIndex]);
+      }
       audio.play();
       isPlaying = true;
       setPlayIcon(true);
@@ -985,7 +1025,17 @@
     currentTimeEl.textContent = '0:00';
     updateStatus('ready');
     renderSetlist();
-    resetVisualizer();
+
+    // Mantener visible la onda de la canción cargada al detenerla.
+    // Solo vuelve el cursor al comienzo; no destruye la visualización.
+    if (currentPeaks) {
+      visualizerWrap.classList.add('active');
+      updateWaveformProgress(0);
+    } else if (currentIndex >= 0 && songs[currentIndex]) {
+      loadWaveformForSong(songs[currentIndex]);
+    } else {
+      resetVisualizer();
+    }
   }
 
   function fadeOutAndStop() {
@@ -1070,9 +1120,10 @@
       });
     });
     renderSetlist();
-    // Auto-play first song if nothing playing
+    // Selecciona la primera canción (carga onda) sin reproducirla; el usuario
+    // debe tocar play para iniciar el sonido.
     if (currentIndex === -1 && songs.length > 0) {
-      playSong(0);
+      selectSong(0);
     }
   }
 
