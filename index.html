@@ -2251,7 +2251,7 @@ const state = {
   recChannelUsed: null,
   loopSeek: 0,
   // Ecualizador de 3 bandas (graves/medios/agudos) — loop
-  loopEqValues: { bass: 0, mid: 0, treble: 0 },
+  loopEqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0 },
   loopEQNodes: null,
   masterAnalyser: null,
   tracks: {
@@ -2262,7 +2262,7 @@ const state = {
       waveformData: [], analyser: null, liveRAF: null,
       zoom: 1, seek: 0,
       // Ecualizador de 3 bandas — pista
-      eqValues: { bass: 0, mid: 0, treble: 0 },
+      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0 },
       eqNodes: null
     },
     mix: {
@@ -2271,7 +2271,7 @@ const state = {
       isRecording: false, isPlaying: false, startTime: 0,
       waveformData: [], analyser: null, liveRAF: null,
       zoom: 1, seek: 0,
-      eqValues: { bass: 0, mid: 0, treble: 0 },
+      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0 },
       eqNodes: null
     },
     track2: {
@@ -2281,7 +2281,7 @@ const state = {
       waveformData: [], analyser: null, liveRAF: null,
       zoom: 1, seek: 0,
       // Ecualizador de 3 bandas — pista
-      eqValues: { bass: 0, mid: 0, treble: 0 },
+      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0 },
       eqNodes: null
     }
   }
@@ -2546,20 +2546,23 @@ function bindEqBand(sliderEl, readoutEl, valuesObj, band, getNodes) {
   sliderEl.addEventListener("input", () => {
     const v = Number(sliderEl.value);
     valuesObj[band] = v;
-    if (readoutEl) readoutEl.textContent = (v > 0 ? "+" : "") + v + "dB";
+    const unit = (band === "gain" || band === "reverb") ? "%" : "dB";
+    if (readoutEl) readoutEl.textContent = (v > 0 ? "+" : "") + v + unit;
     updateEqFill(sliderEl);
     const nodes = getNodes();
-    if (nodes) nodes[band].gain.value = v;
+    if (nodes && nodes[band]) nodes[band].gain.value = v;
   });
 }
 
 bindEqBand(document.getElementById("loop-eq-bass"),   document.getElementById("loop-eq-bass-readout"),   state.loopEqValues, "bass",   () => state.loopEQNodes);
 bindEqBand(document.getElementById("loop-eq-mid"),    document.getElementById("loop-eq-mid-readout"),    state.loopEqValues, "mid",    () => state.loopEQNodes);
 bindEqBand(document.getElementById("loop-eq-treble"), document.getElementById("loop-eq-treble-readout"), state.loopEqValues, "treble", () => state.loopEQNodes);
+    bindEqBand(document.getElementById("loop-eq-gain"),   document.getElementById("loop-eq-gain-readout"),   state.loopEqValues, "gain",   () => state.loopEQNodes);
+    bindEqBand(document.getElementById("loop-eq-reverb"), document.getElementById("loop-eq-reverb-readout"), state.loopEqValues, "reverb", () => state.loopEQNodes);
 
 trackIds.forEach(id => {
   const track = state.tracks[id];
-  ["bass", "mid", "treble"].forEach(band => {
+  ["bass", "mid", "treble", "gain", "reverb"].forEach(band => {
     bindEqBand(
       document.getElementById(`${id}-eq-${band}`),
       document.getElementById(`${id}-eq-${band}-readout`),
