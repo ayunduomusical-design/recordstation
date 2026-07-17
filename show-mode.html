@@ -307,6 +307,7 @@
   .eq-band input[type="range"]::-moz-range-thumb { width:18px;height:12px;border:1px solid var(--amber-2);border-radius:3px;background:#2b251c; }
   .equalizer-scale { display:flex;justify-content:space-between;margin-top:7px;color:var(--soft);font:8px var(--mono);text-transform:uppercase; }
 
+  .visualizer-wrap {
     position: relative;
     width: 100%;
     height: 96px;
@@ -461,6 +462,50 @@
     box-shadow: 0 0 12px rgba(240,179,90,.5);
   }
 
+  /* Vista ajustada al viewport */
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body { min-height: 100dvh; }
+  .shell {
+    width: min(1400px, calc(100% - 32px));
+    height: 100dvh;
+    padding: 18px 0;
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 14px 18px;
+    overflow: hidden;
+  }
+  .topbar { grid-column: 1 / -1; }
+  .setlist-section, .player-section { min-width: 0; min-height: 0; }
+  .setlist-section { display: flex; flex-direction: column; overflow: hidden; }
+  .setlist { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px; scrollbar-color: var(--line-hi) transparent; }
+  .player-section { display: flex; flex-direction: column; overflow: hidden; }
+  .now-playing { flex: 0 0 auto; }
+  .visualizer-wrap {
+    flex: 0 0 clamp(76px, 12vh, 96px);
+    inline-size: 100%;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+  }
+  #visualizer-canvas {
+    display: block;
+    inline-size: 100% !important;
+    block-size: 100% !important;
+    max-inline-size: 100%;
+  }
+  .equalizer-panel { flex: 1 1 auto; min-height: 205px; overflow: hidden; }
+  .eq-band { grid-template-rows: 18px 104px 16px; }
+  .eq-band input[type="range"] { width: 104px; margin: 40px -28px; }
+  .player-controls, .volume-row, .status-pill { flex: 0 0 auto; }
+
+  @media (max-width: 760px) {
+    .shell {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(110px, 25vh) minmax(0, 1fr);
+    }
+    .topbar { grid-column: 1; }
+    .player-section { overflow-y: auto; }
+    .equalizer-panel { flex: 0 0 auto; }
+  }
   @media (max-width: 600px) {
     .shell { padding: 16px 0; }
     .player-controls { grid-template-columns: 1fr; gap: 10px; }
@@ -507,9 +552,13 @@
       <span class="now-playing-label">Reproduciendo</span>
       <div class="now-playing-title" id="now-playing-title">—</div>
     </div>
+    <div class="visualizer-wrap" id="visualizer-wrap">
+      <canvas id="visualizer-canvas"></canvas>
+      <div class="visualizer-idle" id="visualizer-idle">Sin señal</div>
+    </div>
     <div class="equalizer-panel" aria-labelledby="equalizer-title">
       <div class="equalizer-header">
-        <div class="equalizer-heading"><h2 class="equalizer-title" id="equalizer-title">Ecualizador profesional</h2><span class="equalizer-subtitle">10 bandas · ±12 dB · Q 1.4</span></div>
+        <div class="equalizer-heading"><h2 class="equalizer-title" id="equalizer-title">Ecualizador profesional</h2><span class="equalizer-subtitle">10 bandas · ±12 dB · Limitador</span></div>
         <div class="equalizer-actions">
           <select class="eq-preset" id="eq-preset" aria-label="Preset de ecualización"><option value="flat">Plano</option><option value="live">Show en vivo</option><option value="vocal">Voz al frente</option><option value="warm">Cálido</option><option value="clarity">Claridad</option></select>
           <button class="eq-btn" id="eq-reset" type="button">Reset</button><button class="eq-btn" id="eq-bypass" type="button" aria-pressed="false">Bypass</button>
@@ -517,11 +566,7 @@
       </div>
       <div class="equalizer-scroll"><div class="equalizer-bands" id="equalizer-bands"></div></div>
       <div class="equalizer-scale"><span>−12 dB</span><span>0 dB</span><span>+12 dB</span></div>
-    </div>
-      <canvas id="visualizer-canvas"></canvas>
-      <div class="visualizer-idle" id="visualizer-idle">Sin señal</div>
-    </div>
-    <div class="player-controls">
+    </div>    <div class="player-controls">
       <button class="play-btn" id="play-pause-btn" type="button" disabled title="Play / Pause">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" id="play-icon-svg"><path d="M8 5v14l11-7z"/></svg>
       </button>
@@ -574,6 +619,8 @@
   let mediaSourceNode = null;
   let eqInputGain = null;
   let eqFilters = [];
+  let eqLimiter = null;
+  let eqOutputGain = null;
 
   // ── PERSISTENCIA (IndexedDB) ──
   // Guarda los archivos de audio (blobs) + nombre + orden, para que el
@@ -729,7 +776,7 @@
   function formatDb(value){const n=Number(value);return(n>0?'+':'')+n.toFixed(1)+' dB';}
   function applyEqualizerValues(){if(eqInputGain)eqInputGain.gain.value=eqBypassed?1:Math.pow(10,Number(eqValues[0])/20);eqFilters.forEach((filter,index)=>filter.gain.value=eqBypassed?0:Number(eqValues[index+1]));try{localStorage.setItem('ayun-show-eq',JSON.stringify(eqValues));}catch(_){}}
   function renderEqualizer(){equalizerBands.innerHTML='';['PRE',...EQ_LABELS].forEach((label,index)=>{const band=document.createElement('label');band.className='eq-band';band.innerHTML=`<span class="eq-value">${formatDb(eqValues[index])}</span><input type="range" min="-12" max="12" step="0.5" value="${eqValues[index]}" aria-label="${index===0?'Preamplificador':'Banda '+label+' hercios'}"><span class="eq-frequency">${label}</span>`;const slider=band.querySelector('input'),value=band.querySelector('.eq-value');slider.addEventListener('input',()=>{eqValues[index]=Number(slider.value);value.textContent=formatDb(slider.value);eqPreset.value='flat';applyEqualizerValues();});equalizerBands.appendChild(band);});}
-  function ensureEqualizerGraph(){const ctx=getAudioCtx();if(!eqInputGain){eqInputGain=ctx.createGain();eqFilters=EQ_FREQUENCIES.map((frequency,index)=>{const filter=ctx.createBiquadFilter();filter.type=index===0?'lowshelf':(index===EQ_FREQUENCIES.length-1?'highshelf':'peaking');filter.frequency.value=frequency;filter.Q.value=1.4;return filter;});let node=eqInputGain;eqFilters.forEach(filter=>{node.connect(filter);node=filter;});node.connect(ctx.destination);applyEqualizerValues();}return ctx;}
+  function ensureEqualizerGraph(){const ctx=getAudioCtx();if(!eqInputGain){eqInputGain=ctx.createGain();eqFilters=EQ_FREQUENCIES.map((frequency,index)=>{const filter=ctx.createBiquadFilter();filter.type=index===0?'lowshelf':(index===EQ_FREQUENCIES.length-1?'highshelf':'peaking');filter.frequency.value=frequency;filter.Q.value=1.4;return filter;});eqLimiter=ctx.createDynamicsCompressor();eqLimiter.threshold.value=-4;eqLimiter.knee.value=3;eqLimiter.ratio.value=20;eqLimiter.attack.value=.003;eqLimiter.release.value=.18;eqOutputGain=ctx.createGain();eqOutputGain.gain.value=.72;let node=eqInputGain;eqFilters.forEach(filter=>{node.connect(filter);node=filter;});node.connect(eqLimiter);eqLimiter.connect(eqOutputGain);eqOutputGain.connect(ctx.destination);applyEqualizerValues();}return ctx;}
   function connectAudioToEqualizer(){if(!audio)return;try{const ctx=ensureEqualizerGraph();mediaSourceNode=ctx.createMediaElementSource(audio);mediaSourceNode.connect(eqInputGain);}catch(err){console.error('No se pudo conectar el ecualizador:',err);}}
   eqPreset.addEventListener('change',()=>{eqValues=[0,...(EQ_PRESETS[eqPreset.value]||EQ_PRESETS.flat)];renderEqualizer();applyEqualizerValues();});
   eqReset.addEventListener('click',()=>{eqPreset.value='flat';eqValues=[0,...EQ_PRESETS.flat];renderEqualizer();applyEqualizerValues();});

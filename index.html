@@ -1301,6 +1301,32 @@
     .eq-row { grid-template-columns: 1fr; }
   }
 
+  /* ── ECUALIZADOR PROFESIONAL: LOOP, PISTAS Y MIX ── */
+  .pro-eq-host { min-width: 0; }
+  .pro-eq-panel { padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),#11100f; background-size: 18px 18px; overflow: hidden; }
+  .pro-eq-header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+  .pro-eq-heading { display:grid; gap:2px; min-width:0; }
+  .pro-eq-title { color:var(--amber-2); font:700 9px var(--mono); letter-spacing:.12em; text-transform:uppercase; }
+  .pro-eq-subtitle { color:var(--soft); font:7px var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+  .pro-eq-actions { display:flex; align-items:center; justify-content:flex-end; gap:5px; flex-wrap:wrap; }
+  .pro-eq-preset { min-height:24px; padding:0 22px 0 7px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); color:var(--muted); font:8px var(--mono); cursor:pointer; }
+  .pro-eq-btn { min-height:24px; padding:0 7px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); color:var(--muted); font:700 7px var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+  .pro-eq-btn:hover { border-color:rgba(240,179,90,.4); color:var(--amber-2); }
+  .pro-eq-btn.active { border-color:var(--red); background:rgba(255,107,95,.1); color:#ffaaa3; }
+  .pro-eq-scroll { overflow-x:auto; padding:2px 1px 5px; scrollbar-color:var(--line-hi) transparent; }
+  .pro-eq-bands { display:grid; grid-template-columns:repeat(11,minmax(44px,1fr)); gap:5px; min-width:560px; }
+  .pro-eq-band { display:grid; grid-template-rows:16px 90px 14px; justify-items:center; gap:3px; }
+  .pro-eq-value,.pro-eq-frequency { font-family:var(--mono); font-size:7px; }
+  .pro-eq-value { color:var(--amber-2); font-variant-numeric:tabular-nums; }
+  .pro-eq-frequency { color:var(--soft); letter-spacing:.02em; text-transform:uppercase; }
+  .pro-eq-band input[type="range"] { width:90px; height:20px; margin:35px -24px; appearance:none; background:transparent; cursor:ns-resize; transform:rotate(-90deg); }
+  .pro-eq-band input[type="range"]::-webkit-slider-runnable-track { height:3px; border-radius:999px; background:linear-gradient(90deg,var(--panel-3) 0 50%,rgba(240,179,90,.65) 50% 100%); }
+  .pro-eq-band input[type="range"]::-webkit-slider-thumb { appearance:none; width:14px; height:10px; margin-top:-4px; border:1px solid var(--amber-2); border-radius:3px; background:#2b251c; box-shadow:0 0 8px rgba(240,179,90,.25); }
+  .pro-eq-band input[type="range"]::-moz-range-track { height:3px; border-radius:999px; background:var(--panel-3); }
+  .pro-eq-band input[type="range"]::-moz-range-progress { height:3px; background:var(--amber); }
+  .pro-eq-band input[type="range"]::-moz-range-thumb { width:14px; height:10px; border:1px solid var(--amber-2); border-radius:3px; background:#2b251c; }
+  .pro-eq-scale { display:flex; justify-content:space-between; margin-top:4px; color:var(--soft); font:7px var(--mono); text-transform:uppercase; }
+  @media (max-width: 600px) { .pro-eq-header { align-items:flex-start; flex-direction:column; } .pro-eq-actions { justify-content:flex-start; } }
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinning { animation: spin .8s linear infinite; }
 
@@ -1761,45 +1787,10 @@
         </div>
       </section>
 
-      <!-- Ecualizador de 3 bandas — Loop -->
-      <section class="module" aria-label="Ecualizador del loop" style="padding-bottom:0;border-bottom:0;">
-        <span class="section-label">Ecualizador (Loop)</span>
-        <div class="eq-row">
-          <div class="eq-band">
-            <span class="eq-label">Graves</span>
-            <input type="range" id="loop-eq-bass" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Graves del loop">
-            <span class="eq-readout" id="loop-eq-bass-readout">0dB</span>
-          </div>
-          <div class="eq-band">
-            <span class="eq-label">Medios</span>
-            <input type="range" id="loop-eq-mid" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Medios del loop">
-            <span class="eq-readout" id="loop-eq-mid-readout">0dB</span>
-          </div>
-          <div class="eq-band">
-            <span class="eq-label">Agudos</span>
-            <input type="range" id="loop-eq-treble" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Agudos del loop">
-            <span class="eq-readout" id="loop-eq-treble-readout">0dB</span>
-          </div>
-        
-          <div class="eq-band">
-            <span class="eq-label">Gain</span>
-            <input type="range" id="loop-eq-gain" min="-100" max="100" step="1" value="0" style="--fill:50%" aria-label="Gain del loop">
-            <span class="eq-readout" id="loop-eq-gain-readout">0%</span>
-          </div>
-          <div class="eq-band">
-            <span class="eq-label">Reverb</span>
-            <input type="range" id="loop-eq-reverb" min="-100" max="100" step="1" value="0" style="--fill:0%" aria-label="Reverb del loop">
-            <span class="eq-readout" id="loop-eq-reverb-readout">0%</span>
-          </div>
-        
-          <div class="eq-band">
-            <span class="eq-label">Delay</span>
-            <input type="range" id="loop-eq-delay" min="0" max="100" step="1" value="50" style="--fill:50%" aria-label="Delay del loop">
-            <span class="eq-readout" id="loop-eq-delay-readout">50%</span>
-          </div>
-        </div>
+      <!-- Ecualizador profesional — Loop -->
+      <section class="module pro-eq-host" aria-label="Ecualizador profesional del loop" style="padding-bottom:0;border-bottom:0;">
+        <div class="pro-eq-panel" data-eq-target="loop" data-eq-title="Loop"></div>
       </section>
-
       <!-- Transport -->
       <div class="transport" aria-label="Controles principales">
         <button class="btn btn-main" id="btn-record" type="button">
@@ -1900,43 +1891,9 @@
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
               </button>
             </div>
-            <!-- Ecualizador de 3 bandas — Pista 1 -->
-            <div class="track-eq-block">
-              <span class="section-label" style="display:block;margin-bottom:8px;">Ecualizador</span>
-              <div class="eq-row">
-                <div class="eq-band">
-                  <span class="eq-label">Graves</span>
-                  <input type="range" id="track1-eq-bass" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Graves de la pista">
-                  <span class="eq-readout" id="track1-eq-bass-readout">0dB</span>
-                </div>
-                <div class="eq-band">
-                  <span class="eq-label">Medios</span>
-                  <input type="range" id="track1-eq-mid" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Medios de la pista">
-                  <span class="eq-readout" id="track1-eq-mid-readout">0dB</span>
-                </div>
-                <div class="eq-band">
-                  <span class="eq-label">Agudos</span>
-                  <input type="range" id="track1-eq-treble" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Agudos de la pista">
-                  <span class="eq-readout" id="track1-eq-treble-readout">0dB</span>
-                </div>
-              
-          <div class="eq-band">
-            <span class="eq-label">Gain</span>
-            <input type="range" id="track1-eq-gain" min="-100" max="100" step="1" value="0" style="--fill:50%" aria-label="Gain del track1">
-            <span class="eq-readout" id="track1-eq-gain-readout">0%</span>
-          </div>
-          <div class="eq-band">
-            <span class="eq-label">Reverb</span>
-            <input type="range" id="track1-eq-reverb" min="-100" max="100" step="1" value="0" style="--fill:0%" aria-label="Reverb del track1">
-            <span class="eq-readout" id="track1-eq-reverb-readout">0%</span>
-          </div>
-        
-          <div class="eq-band">
-            <span class="eq-label">Delay</span>
-            <input type="range" id="track1-eq-delay" min="0" max="100" step="1" value="50" style="--fill:50%" aria-label="Delay del track1">
-            <span class="eq-readout" id="track1-eq-delay-readout">50%</span>
-          </div>
-        </div>
+            <!-- Ecualizador profesional — Pista 1 -->
+            <div class="track-eq-block pro-eq-host">
+              <div class="pro-eq-panel" data-eq-target="track1" data-eq-title="Pista 1"></div>
             </div>
           </div>
 
@@ -1993,30 +1950,9 @@
               <button class="trim-undo-btn" id="mix-trim-undo" type="button" disabled title="Deshacer corte" aria-label="Deshacer corte"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"></path></svg></button>
               <button class="trim-undo-btn" id="mix-trim-redo" type="button" disabled title="Rehacer corte" aria-label="Rehacer corte"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg></button>
             </div>
-            <div class="track-eq-block">
-              <span class="section-label" style="display:block;margin-bottom:8px;">Ecualizador</span>
-              <div class="eq-row">
-                <div class="eq-band"><span class="eq-label">Graves</span><input type="range" id="mix-eq-bass" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Graves de la mezcla"><span class="eq-readout" id="mix-eq-bass-readout">0dB</span></div>
-                <div class="eq-band"><span class="eq-label">Medios</span><input type="range" id="mix-eq-mid" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Medios de la mezcla"><span class="eq-readout" id="mix-eq-mid-readout">0dB</span></div>
-                <div class="eq-band"><span class="eq-label">Agudos</span><input type="range" id="mix-eq-treble" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Agudos de la mezcla"><span class="eq-readout" id="mix-eq-treble-readout">0dB</span></div>
-              
-          <div class="eq-band">
-            <span class="eq-label">Gain</span>
-            <input type="range" id="mix-eq-gain" min="-100" max="100" step="1" value="0" style="--fill:50%" aria-label="Gain del mix">
-            <span class="eq-readout" id="mix-eq-gain-readout">0%</span>
-          </div>
-          <div class="eq-band">
-            <span class="eq-label">Reverb</span>
-            <input type="range" id="mix-eq-reverb" min="-100" max="100" step="1" value="0" style="--fill:0%" aria-label="Reverb del mix">
-            <span class="eq-readout" id="mix-eq-reverb-readout">0%</span>
-          </div>
-        
-          <div class="eq-band">
-            <span class="eq-label">Delay</span>
-            <input type="range" id="mix-eq-delay" min="0" max="100" step="1" value="50" style="--fill:50%" aria-label="Delay del mix">
-            <span class="eq-readout" id="mix-eq-delay-readout">50%</span>
-          </div>
-        </div>
+            <!-- Ecualizador profesional — Mix de pistas -->
+            <div class="track-eq-block pro-eq-host">
+              <div class="pro-eq-panel" data-eq-target="mix" data-eq-title="Mix de pistas"></div>
             </div>
           </div>
 
@@ -2095,43 +2031,9 @@
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
               </button>
             </div>
-            <!-- Ecualizador de 3 bandas — Pista 2 -->
-            <div class="track-eq-block">
-              <span class="section-label" style="display:block;margin-bottom:8px;">Ecualizador</span>
-              <div class="eq-row">
-                <div class="eq-band">
-                  <span class="eq-label">Graves</span>
-                  <input type="range" id="track2-eq-bass" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Graves de la pista">
-                  <span class="eq-readout" id="track2-eq-bass-readout">0dB</span>
-                </div>
-                <div class="eq-band">
-                  <span class="eq-label">Medios</span>
-                  <input type="range" id="track2-eq-mid" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Medios de la pista">
-                  <span class="eq-readout" id="track2-eq-mid-readout">0dB</span>
-                </div>
-                <div class="eq-band">
-                  <span class="eq-label">Agudos</span>
-                  <input type="range" id="track2-eq-treble" min="-12" max="12" step="1" value="0" style="--fill:50%" aria-label="Agudos de la pista">
-                  <span class="eq-readout" id="track2-eq-treble-readout">0dB</span>
-                </div>
-              
-          <div class="eq-band">
-            <span class="eq-label">Gain</span>
-            <input type="range" id="track2-eq-gain" min="-100" max="100" step="1" value="0" style="--fill:50%" aria-label="Gain del track2">
-            <span class="eq-readout" id="track2-eq-gain-readout">0%</span>
-          </div>
-          <div class="eq-band">
-            <span class="eq-label">Reverb</span>
-            <input type="range" id="track2-eq-reverb" min="-100" max="100" step="1" value="0" style="--fill:0%" aria-label="Reverb del track2">
-            <span class="eq-readout" id="track2-eq-reverb-readout">0%</span>
-          </div>
-        
-          <div class="eq-band">
-            <span class="eq-label">Delay</span>
-            <input type="range" id="track2-eq-delay" min="0" max="100" step="1" value="50" style="--fill:50%" aria-label="Delay del track2">
-            <span class="eq-readout" id="track2-eq-delay-readout">50%</span>
-          </div>
-        </div>
+            <!-- Ecualizador profesional — Pista 2 -->
+            <div class="track-eq-block pro-eq-host">
+              <div class="pro-eq-panel" data-eq-target="track2" data-eq-title="Pista 2"></div>
             </div>
           </div>
         </div>
@@ -2321,8 +2223,8 @@ const state = {
   activeRouting: null,
   recChannelUsed: null,
   loopSeek: 0,
-  // Ecualizador de 3 bandas (graves/medios/agudos) — loop
-  loopEqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0, delay: 50 },
+  // Ecualizador profesional — loop
+  loopEqValues: { preamp: 0, bands: [0,0,0,0,0,0,0,0,0,0], bypassed: false },
   loopEQNodes: null,
   masterAnalyser: null,
   tracks: {
@@ -2332,8 +2234,8 @@ const state = {
       isRecording: false, isPlaying: false, startTime: 0,
       waveformData: [], analyser: null, liveRAF: null,
       zoom: 1, seek: 0,
-      // Ecualizador de 3 bandas — pista
-      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0, delay: 50 },
+      // Ecualizador profesional — pista
+      eqValues: { preamp: 0, bands: [0,0,0,0,0,0,0,0,0,0], bypassed: false },
       eqNodes: null
     },
     mix: {
@@ -2342,7 +2244,7 @@ const state = {
       isRecording: false, isPlaying: false, startTime: 0,
       waveformData: [], analyser: null, liveRAF: null,
       zoom: 1, seek: 0,
-      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0, delay: 50 },
+      eqValues: { preamp: 0, bands: [0,0,0,0,0,0,0,0,0,0], bypassed: false },
       eqNodes: null
     },
     track2: {
@@ -2351,8 +2253,8 @@ const state = {
       isRecording: false, isPlaying: false, startTime: 0,
       waveformData: [], analyser: null, liveRAF: null,
       zoom: 1, seek: 0,
-      // Ecualizador de 3 bandas — pista
-      eqValues: { bass: 0, mid: 0, treble: 0, gain: 0, reverb: 0, delay: 50 },
+      // Ecualizador profesional — pista
+      eqValues: { preamp: 0, bands: [0,0,0,0,0,0,0,0,0,0], bypassed: false },
       eqNodes: null
     }
   }
@@ -2526,131 +2428,76 @@ async function initAudio() {
   return true;
 }
 
-/* ─── ECUALIZADOR DE 3 BANDAS (graves/medios/agudos) ───
-   Tres BiquadFilterNode en cadena: lowshelf (graves) -> peaking (medios)
-   -> highshelf (agudos). Se usan tanto en reproduccion en vivo (conectados
-   entre la fuente y el gainNode principal) como al exportar a MP3, donde
-   se renderizan "offline" con OfflineAudioContext para que el archivo
-   descargado quede ya ecualizado. */
+/* ─── ECUALIZADOR PROFESIONAL DE 10 BANDAS ─── */
+const EQ_FREQUENCIES = [31,62,125,250,500,1000,2000,4000,8000,16000];
+const EQ_LABELS = ["31","62","125","250","500","1K","2K","4K","8K","16K"];
+const EQ_PRESETS = {
+  flat: [0,0,0,0,0,0,0,0,0,0], live: [2,1,0,-1,-1,1,2,2,1,0],
+  vocal: [-3,-2,-1,0,1,3,4,3,1,0], warm: [3,3,2,1,0,-1,-1,0,1,1],
+  clarity: [-2,-1,0,-1,0,2,3,4,3,2]
+};
+
 function createEQChain(ctx, values) {
-  const bass = ctx.createBiquadFilter();
-  bass.type = "lowshelf";
-  bass.frequency.value = 200;
-  bass.gain.value = values.bass;
-
-  const mid = ctx.createBiquadFilter();
-  mid.type = "peaking";
-  mid.frequency.value = 1000;
-  mid.Q.value = 1;
-  mid.gain.value = values.mid;
-
-  const treble = ctx.createBiquadFilter();
-  treble.type = "highshelf";
-  treble.frequency.value = 4000;
-  treble.gain.value = values.treble;
-
-  bass.connect(mid);
-  mid.connect(treble);
-
-  return { bass, mid, treble, input: bass, output: treble };
+  const preamp = ctx.createGain();
+  const filters = EQ_FREQUENCIES.map((frequency,index) => {
+    const filter = ctx.createBiquadFilter();
+    filter.type = index === 0 ? "lowshelf" : (index === EQ_FREQUENCIES.length - 1 ? "highshelf" : "peaking");
+    filter.frequency.value = frequency; filter.Q.value = 1.4;
+    return filter;
+  });
+  const limiter = ctx.createDynamicsCompressor();
+  limiter.threshold.value = -4; limiter.knee.value = 3; limiter.ratio.value = 20; limiter.attack.value = .003; limiter.release.value = .18;
+  const outputGain = ctx.createGain();
+  let node = preamp; filters.forEach(filter => { node.connect(filter); node = filter; });
+  node.connect(limiter); limiter.connect(outputGain);
+  const chain = { preamp, filters, limiter, outputGain, input: preamp, output: outputGain };
+  applyEQState(values, chain);
+  return chain;
 }
 
-// Crea (una sola vez) las cadenas de EQ del loop y de cada pista, y las
-// conecta hacia el gainNode principal. Se puede llamar varias veces sin
-// problema: si ya existen, no hace nada.
+function applyEQState(values, nodes) {
+  if (!values || !nodes) return;
+  const bypassed = !!values.bypassed;
+  nodes.preamp.gain.value = bypassed ? 1 : Math.pow(10, Number(values.preamp || 0) / 20);
+  nodes.filters.forEach((filter,index) => { filter.gain.value = bypassed ? 0 : Number(values.bands[index] || 0); });
+  nodes.outputGain.gain.value = bypassed ? 1 : .72;
+}
+
 function ensureEQChains() {
   if (!state.audioCtx || !state.gainNode) return;
-  if (!state.loopEQNodes) {
-    state.loopEQNodes = createEQChain(state.audioCtx, state.loopEqValues);
-    state.loopEQNodes.output.connect(state.gainNode);
-  }
-  trackIds.forEach(id => {
-    const track = state.tracks[id];
-    if (!track.eqNodes) {
-      track.eqNodes = createEQChain(state.audioCtx, track.eqValues);
-      track.eqNodes.output.connect(state.gainNode);
-    }
-  });
+  if (!state.loopEQNodes) { state.loopEQNodes = createEQChain(state.audioCtx, state.loopEqValues); state.loopEQNodes.output.connect(state.gainNode); }
+  trackIds.forEach(id => { const track=state.tracks[id]; if(!track.eqNodes){track.eqNodes=createEQChain(state.audioCtx,track.eqValues);track.eqNodes.output.connect(state.gainNode);} });
 }
 
-// Renderiza un AudioBuffer a traves de la cadena de EQ usando
-// OfflineAudioContext, devolviendo un nuevo buffer ya procesado. Si las
-// 3 bandas estan en 0dB, devuelve el buffer original sin gastar tiempo
-// renderizando de mas.
-function renderWithEQ(buffer, eqValues) {
-  return new Promise((resolve, reject) => {
-    if (!buffer) { resolve(buffer); return; }
-    if (!eqValues || (!eqValues.bass && !eqValues.mid && !eqValues.treble)) {
-      resolve(buffer);
-      return;
-    }
+function renderWithEQ(buffer, values) {
+  return new Promise((resolve,reject) => {
+    if (!buffer || !values || values.bypassed || (!values.preamp && !values.bands.some(Boolean))) { resolve(buffer); return; }
     try {
-      const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-      if (!OfflineCtx) { resolve(buffer); return; }
-      const offlineCtx = new OfflineCtx(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
-      const src = offlineCtx.createBufferSource();
-      src.buffer = buffer;
-      const chain = createEQChain(offlineCtx, eqValues);
-      src.connect(chain.input);
-      chain.output.connect(offlineCtx.destination);
-      src.start(0);
+      const OfflineCtx=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+      if(!OfflineCtx){resolve(buffer);return;}
+      const offlineCtx=new OfflineCtx(buffer.numberOfChannels,buffer.length,buffer.sampleRate);
+      const src=offlineCtx.createBufferSource();src.buffer=buffer;
+      const chain=createEQChain(offlineCtx,values);src.connect(chain.input);chain.output.connect(offlineCtx.destination);src.start(0);
       offlineCtx.startRendering().then(resolve).catch(reject);
-    } catch (e) {
-      reject(e);
-    }
+    } catch(e){reject(e);}
   });
 }
 
-// Actualiza el relleno visual (--fill) de un slider de EQ segun su valor actual
-function updateEqFill(el) {
-  if (!el) return;
-  const min = Number(el.min), max = Number(el.max), val = Number(el.value);
-  const pct = max > min ? ((val - min) / (max - min)) * 100 : 50;
-  el.style.setProperty("--fill", pct + "%");
+function formatEQDb(value){const n=Number(value);return(n>0?"+":"")+n.toFixed(1)+" dB";}
+function renderProfessionalEQ(target,values,getNodes){
+  const panel=document.querySelector(`[data-eq-target="${target}"]`);if(!panel)return;
+  const title=panel.dataset.eqTitle||target;
+  panel.innerHTML=`<div class="pro-eq-header"><div class="pro-eq-heading"><span class="pro-eq-title">Ecualizador profesional · ${title}</span><span class="pro-eq-subtitle">10 bandas · ±12 dB · Limitador</span></div><div class="pro-eq-actions"><select class="pro-eq-preset" aria-label="Preset de ecualización de ${title}"><option value="flat">Plano</option><option value="live">Show en vivo</option><option value="vocal">Voz al frente</option><option value="warm">Cálido</option><option value="clarity">Claridad</option></select><button class="pro-eq-btn pro-eq-reset" type="button">Reset</button><button class="pro-eq-btn pro-eq-bypass" type="button" aria-pressed="${values.bypassed}">Bypass</button></div></div><div class="pro-eq-scroll"><div class="pro-eq-bands"></div></div><div class="pro-eq-scale"><span>−12 dB</span><span>0 dB</span><span>+12 dB</span></div>`;
+  const bandsEl=panel.querySelector(".pro-eq-bands"),preset=panel.querySelector(".pro-eq-preset"),bypass=panel.querySelector(".pro-eq-bypass");
+  const allValues=[values.preamp,...values.bands];
+  ["PRE",...EQ_LABELS].forEach((label,index)=>{const band=document.createElement("label");band.className="pro-eq-band";band.innerHTML=`<span class="pro-eq-value">${formatEQDb(allValues[index])}</span><input type="range" min="-12" max="12" step="0.5" value="${allValues[index]}" aria-label="${index===0?"Preamplificador de "+title:"Banda "+label+" hercios de "+title}"><span class="pro-eq-frequency">${label}</span>`;const slider=band.querySelector("input"),readout=band.querySelector(".pro-eq-value");slider.addEventListener("input",()=>{const v=Number(slider.value);if(index===0)values.preamp=v;else values.bands[index-1]=v;readout.textContent=formatEQDb(v);preset.value="flat";applyEQState(values,getNodes());});bandsEl.appendChild(band);});
+  panel.querySelector(".pro-eq-reset").addEventListener("click",()=>{values.preamp=0;values.bands=[...EQ_PRESETS.flat];renderProfessionalEQ(target,values,getNodes);applyEQState(values,getNodes());});
+  preset.addEventListener("change",()=>{values.preamp=0;values.bands=[...(EQ_PRESETS[preset.value]||EQ_PRESETS.flat)];renderProfessionalEQ(target,values,getNodes);applyEQState(values,getNodes());});
+  bypass.classList.toggle("active",values.bypassed);bypass.addEventListener("click",()=>{values.bypassed=!values.bypassed;bypass.classList.toggle("active",values.bypassed);bypass.setAttribute("aria-pressed",String(values.bypassed));applyEQState(values,getNodes());});
 }
 
-// Conecta un slider de EQ (graves/medios/agudos) a su valor de estado y,
-// si el nodo de filtro ya existe, actualiza la ganancia en vivo.
-function bindEqBand(sliderEl, readoutEl, valuesObj, band, getNodes) {
-  if (!sliderEl) return;
-  updateEqFill(sliderEl);
-  sliderEl.addEventListener("input", () => {
-    const v = Number(sliderEl.value);
-    valuesObj[band] = v;
-    let unit, prefix;
-    if (band === "delay") {
-      unit = "%"; prefix = "";
-    } else if (band === "gain" || band === "reverb") {
-      unit = "%"; prefix = (v > 0 ? "+" : "");
-    } else {
-      unit = "dB"; prefix = (v > 0 ? "+" : "");
-    }
-    if (readoutEl) readoutEl.textContent = prefix + v + unit;
-    updateEqFill(sliderEl);
-    const nodes = getNodes();
-    if (nodes && nodes[band]) nodes[band].gain.value = v;
-  });
-}
-
-bindEqBand(document.getElementById("loop-eq-bass"),   document.getElementById("loop-eq-bass-readout"),   state.loopEqValues, "bass",   () => state.loopEQNodes);
-bindEqBand(document.getElementById("loop-eq-mid"),    document.getElementById("loop-eq-mid-readout"),    state.loopEqValues, "mid",    () => state.loopEQNodes);
-bindEqBand(document.getElementById("loop-eq-treble"), document.getElementById("loop-eq-treble-readout"), state.loopEqValues, "treble", () => state.loopEQNodes);
-    bindEqBand(document.getElementById("loop-eq-gain"),   document.getElementById("loop-eq-gain-readout"),   state.loopEqValues, "gain",   () => state.loopEQNodes);
-    bindEqBand(document.getElementById("loop-eq-reverb"), document.getElementById("loop-eq-reverb-readout"), state.loopEqValues, "reverb", () => state.loopEQNodes);
-    bindEqBand(document.getElementById("loop-eq-delay"),  document.getElementById("loop-eq-delay-readout"),  state.loopEqValues, "delay",  () => state.loopEQNodes);
-
-trackIds.forEach(id => {
-  const track = state.tracks[id];
-  ["bass", "mid", "treble", "gain", "reverb", "delay"].forEach(band => {
-    bindEqBand(
-      document.getElementById(`${id}-eq-${band}`),
-      document.getElementById(`${id}-eq-${band}-readout`),
-      track.eqValues, band,
-      () => track.eqNodes
-    );
-  });
-});
-
+renderProfessionalEQ("loop",state.loopEqValues,()=>state.loopEQNodes);
+trackIds.forEach(id=>renderProfessionalEQ(id,state.tracks[id].eqValues,()=>state.tracks[id].eqNodes));
 /* ─── CAPTURA PCM (AudioWorklet) ───
    Sustituye a MediaRecorder para grabar: captura las muestras Float32
    crudas del canal elegido, sin recompresion con perdida (webm/opus). */
