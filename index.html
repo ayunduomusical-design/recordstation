@@ -799,9 +799,15 @@
 
   .mid-modules .module { padding-bottom: 0; border-bottom: 0; }
   .mid-modules .module-wide { grid-column: 1 / -1; }
+  .mid-modules > .module[aria-label="Volumen"] { grid-column: 1; grid-row: 1; }
+  .mid-modules > .module[aria-label="Metronomo"] { grid-column: 2; grid-row: 1 / span 2; align-content: start; }
+  .mid-modules > .module[aria-label="Compensacion de latencia"] { grid-column: 1; grid-row: 2; align-content: start; }
 
   @media (max-width: 720px) {
     .mid-modules { grid-template-columns: 1fr; }
+    .mid-modules > .module[aria-label="Volumen"],
+    .mid-modules > .module[aria-label="Metronomo"],
+    .mid-modules > .module[aria-label="Compensacion de latencia"] { grid-column: 1; grid-row: auto; }
   }
 
   .countin-row { margin-top: 4px; }
@@ -1663,7 +1669,7 @@
     <div class="deck">
 
       <!-- Meters -->
-      <div class="meter-row" aria-label="Medidores">
+      <div class="meter-row" aria-label="Medidores" hidden aria-hidden="true" style="display:none !important;">
         <div class="meter">
           <span class="meter-label">Duracion</span>
           <strong class="meter-value"><span id="duration-val">0.0</span>s</strong>
@@ -1680,7 +1686,7 @@
 
       <!-- Controles generales: visibles antes del Loop -->
       <div class="mid-modules" aria-label="Ajustes de reproduccion">
-        <section class="module" aria-label="Volumen">
+        <section class="module" aria-label="Volumen" style="align-content:start;gap:4px;">
           <span class="section-label">Volumen</span>
           <div class="volume-row">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm11.5-.5v7a4 4 0 0 0 0-7zm2.8-2.8v12.6a7 7 0 0 0 0-12.6z"></path></svg>
@@ -1744,73 +1750,6 @@
         </section>
       </div>
 
-
-      <!-- Loop waveform — small (2-row height) -->
-      <section class="wave-section" aria-label="Forma de onda del loop">
-        <div class="wave-head">
-          <div class="wave-head-label">
-            <input type="text" class="track-name-input" id="loop-name" value="Loop" maxlength="40" aria-label="Nombre del loop">
-          </div>
-          <span class="hint" id="wave-hint">Prepara tu instrumento y pulsa grabar.</span>
-        </div>
-        <div class="wave-wrap" id="wave-viewport">
-          <div class="wave-zoomframe" id="wave-zoomframe">
-            <canvas id="waveform"></canvas>
-            <div class="trim-shade" id="loop-shade-start" style="left:0;width:0"></div>
-            <div class="trim-shade" id="loop-shade-end"   style="right:0;width:0"></div>
-            <div class="trim-handle start hidden" id="loop-handle-start">
-              <div class="trim-badge" id="loop-badge-start"></div>
-            </div>
-            <div class="trim-handle end hidden" id="loop-handle-end">
-              <div class="trim-badge" id="loop-badge-end"></div>
-            </div>
-            <div class="seek-strip" id="loop-seek-strip"></div>
-            <div class="seek-cursor" id="loop-seek-cursor" style="left:0"></div>
-            <div class="seek-badge" id="loop-seek-badge">0.000s</div>
-          </div>
-          <div class="empty-state" id="empty-state">El loop aparecera aqui cuando termines la primera toma.</div>
-          <div class="dropzone-overlay" id="loop-dropzone">Soltar archivo de audio aqui</div>
-        </div>
-        <div class="zoom-row">
-          <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
-          <input type="range" id="loop-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda del loop">
-          <span class="readout" id="loop-zoom-readout">1.0x</span>
-          <button class="trim-undo-btn" id="loop-trim-undo" type="button" disabled title="Deshacer corte" aria-label="Deshacer corte">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"></path></svg>
-          </button>
-          <button class="trim-undo-btn" id="loop-trim-redo" type="button" disabled title="Rehacer corte" aria-label="Rehacer corte">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
-          </button>
-        </div>
-        <div class="timeline" aria-hidden="true">
-          <div id="playhead"></div>
-        </div>
-      </section>
-
-      <!-- Ecualizador profesional — Loop -->
-      <section class="module pro-eq-host" aria-label="Ecualizador profesional del loop" style="padding-bottom:0;border-bottom:0;">
-        <div class="pro-eq-panel" data-eq-target="loop" data-eq-title="Loop"></div>
-      </section>
-      <!-- Transport -->
-      <div class="transport" aria-label="Controles principales">
-        <button class="btn btn-main" id="btn-record" type="button">
-          <svg class="icon" id="rec-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle></svg>
-          <span id="rec-label">Grabar</span>
-        </button>
-        <button class="btn btn-secondary" id="btn-play" type="button" disabled>
-          <svg class="icon" id="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
-          <span id="play-label">Reproducir</span>
-        </button>
-        <button class="btn icon-btn btn-download" id="btn-download" type="button" disabled title="Descargar loop como MP3" aria-label="Descargar MP3">
-          <svg class="icon" id="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
-        </button>
-        <button class="btn icon-btn btn-download" id="btn-download-wav" type="button" disabled title="Descargar loop como WAV (alta calidad)" aria-label="Descargar WAV">
-          <svg class="icon" id="dl-wav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
-        </button>
-        <button class="btn icon-btn" id="btn-clear" type="button" disabled aria-label="Borrar loop" title="Borrar loop">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
-        </button>
-      </div>
 
       <!-- Pistas de grabacion (2), cada una con su propio microfono de entrada -->
       <section aria-label="Pistas de grabacion">
@@ -2039,6 +1978,90 @@
         </div>
       </section>
 
+      <!-- Loop waveform — small (2-row height) -->
+      <section class="wave-section" aria-label="Forma de onda del loop">
+        <div class="wave-head">
+          <div class="wave-head-label">
+            <input type="text" class="track-name-input" id="loop-name" value="Loop" maxlength="40" aria-label="Nombre del loop">
+          </div>
+          <span class="hint" id="wave-hint">Prepara tu instrumento y pulsa grabar.</span>
+        </div>
+        <div class="loop-input-routing" aria-label="Entrada de audio para Loop" style="display:grid;gap:6px;">
+          <div class="track-mic-row">
+            <span class="track-mic-label">Microfono</span>
+            <select class="input-select" id="input-device" aria-label="Dispositivo de entrada del Loop">
+              <option value="">Entrada predeterminada</option>
+            </select>
+          </div>
+          <div class="track-mic-row">
+            <span class="track-mic-label">Canal</span>
+            <select class="input-select" id="input-channel" aria-label="Canal de entrada del Loop">
+              <option value="1" selected>Canal 1 (izquierdo)</option>
+              <option value="2">Canal 2 (derecho)</option>
+              <option value="both">Ambos canales (mezclados)</option>
+            </select>
+          </div>          <div class="transport" aria-label="Controles principales">
+            <button class="btn btn-main" id="btn-record" type="button">
+              <svg class="icon" id="rec-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle></svg>
+              <span id="rec-label">Grabar</span>
+            </button>
+            <button class="btn btn-secondary" id="btn-play" type="button" disabled>
+              <svg class="icon" id="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+              <span id="play-label">Reproducir</span>
+            </button>
+            <button class="btn icon-btn btn-download" id="btn-download" type="button" disabled title="Descargar loop como MP3" aria-label="Descargar MP3">
+              <svg class="icon" id="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
+            </button>
+            <button class="btn icon-btn btn-download" id="btn-download-wav" type="button" disabled title="Descargar loop como WAV (alta calidad)" aria-label="Descargar WAV">
+              <svg class="icon" id="dl-wav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
+            </button>
+            <button class="btn icon-btn" id="btn-clear" type="button" disabled aria-label="Borrar loop" title="Borrar loop">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
+            </button>
+          </div>
+
+          <span class="input-hint channel-status" id="channel-status"></span>
+        </div>
+        <div class="wave-wrap" id="wave-viewport">
+          <div class="wave-zoomframe" id="wave-zoomframe">
+            <canvas id="waveform"></canvas>
+            <div class="trim-shade" id="loop-shade-start" style="left:0;width:0"></div>
+            <div class="trim-shade" id="loop-shade-end"   style="right:0;width:0"></div>
+            <div class="trim-handle start hidden" id="loop-handle-start">
+              <div class="trim-badge" id="loop-badge-start"></div>
+            </div>
+            <div class="trim-handle end hidden" id="loop-handle-end">
+              <div class="trim-badge" id="loop-badge-end"></div>
+            </div>
+            <div class="seek-strip" id="loop-seek-strip"></div>
+            <div class="seek-cursor" id="loop-seek-cursor" style="left:0"></div>
+            <div class="seek-badge" id="loop-seek-badge">0.000s</div>
+          </div>
+          <div class="empty-state" id="empty-state">El loop aparecera aqui cuando termines la primera toma.</div>
+          <div class="dropzone-overlay" id="loop-dropzone">Soltar archivo de audio aqui</div>
+        </div>
+        <div class="zoom-row">
+          <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
+          <input type="range" id="loop-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda del loop">
+          <span class="readout" id="loop-zoom-readout">1.0x</span>
+          <button class="trim-undo-btn" id="loop-trim-undo" type="button" disabled title="Deshacer corte" aria-label="Deshacer corte">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"></path></svg>
+          </button>
+          <button class="trim-undo-btn" id="loop-trim-redo" type="button" disabled title="Rehacer corte" aria-label="Rehacer corte">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
+          </button>
+        </div>
+        <div class="timeline" aria-hidden="true">
+          <div id="playhead"></div>
+        </div>
+      </section>
+
+      <!-- Ecualizador profesional — Loop -->
+      <section class="module pro-eq-host" aria-label="Ecualizador profesional del loop" style="padding-bottom:0;border-bottom:0;">
+        <div class="pro-eq-panel" data-eq-target="loop" data-eq-title="Loop"></div>
+      </section>
+
+
       <!-- Play Todo — Loop + Pistas juntos -->
       <div class="play-todo-wrap">
         <span class="play-todo-label">Reproduccion sincronizada</span>
@@ -2057,19 +2080,7 @@
     <aside class="side-panel" aria-label="Ajustes">
       <div class="notice" id="mic-error" role="alert"></div>
 
-      <section class="module" aria-label="Entrada de audio para Loop">
-        <span class="section-label">Entrada de audio para Loop</span>
-        <select class="input-select" id="input-device" aria-label="Dispositivo de entrada del Loop">
-          <option value="">Entrada predeterminada</option>
-        </select>
-        <span class="input-hint">Elige tu interfaz (ej. UMC22) para grabar el Loop desde el canal conectado. Esta entrada solo se usa para grabar el Loop; cada pista de grabacion tiene su propio microfono y canal. Si la lista esta vacia, dale permiso al microfono y vuelve a abrir este menu.</span>
-        <select class="input-select" id="input-channel" aria-label="Canal de entrada del Loop">
-          <option value="1" selected>Canal 1 (izquierdo)</option>
-          <option value="2">Canal 2 (derecho)</option>
-          <option value="both">Ambos canales (mezclados)</option>
-        </select>
-        <span class="input-hint">En la UMC22: Canal 1 es la entrada combo XLR/TRS, Canal 2 es la entrada linea. "Ambos" mezcla microfono y linea directa en una sola pista mono.</span>
-        <span class="input-hint channel-status" id="channel-status"></span>
+      <section class="module" aria-label="Nivel de entrada y salida">
         <div class="vu-wrap" aria-label="Nivel de entrada">
           <span class="vu-label">Nivel de entrada / salida</span>
           <div class="vu-row">
@@ -2101,6 +2112,8 @@
           <li><strong>Entrada 2:</strong> instrumento/línea.</li>
           <li><strong>Direct Monitor:</strong> activado.</li>
           <li><strong>Ganancia:</strong> sin llegar a <strong>CLIP</strong>.</li>
+          <li><strong>Interfaz:</strong> Elige tu interfaz (ej. UMC22) para grabar desde el canal conectado.</li>
+          <li><strong>Canales:</strong> En la UMC22, Canal 1 es la entrada combo XLR/TRS y Canal 2 es la entrada linea. "Ambos" mezcla microfono y linea directa en una sola pista mono.</li>
         </ul>
       </section>
 
@@ -2370,8 +2383,13 @@ const stopIcon   = '<path d="M7 7h10v10H7z"></path>';
 const playIcon   = '<path d="M8 5v14l11-7z"></path>';
 
 /* ─── INIT ─── */
-function updateRangeFill() {
-  els.volume.style.setProperty("--fill", `${els.volume.value}%`);
+function updateRangeFill(rangeEl = els.volume) {
+  if (!rangeEl) return;
+  const min = Number(rangeEl.min) || 0;
+  const max = Number(rangeEl.max) || 100;
+  const value = Number(rangeEl.value);
+  const fill = max > min ? ((value - min) / (max - min)) * 100 : 0;
+  rangeEl.style.setProperty("--fill", `${fill}%`);
 }
 
 function resizeCanvas() {
@@ -3628,14 +3646,15 @@ function drawWaveform() {
   if (!state.waveformData.length) return;
   const bw = w / state.waveformData.length;
   state.waveformData.forEach((v, i) => {
-    const bh = Math.max(2, v * h * .86);
+    const bh = Math.max(3, Math.min(h * .94, v * h * 1.48));
     const x = i * bw, y = (h - bh) / 2;
+    const barWidth = Math.max(1, Math.min(2, bw * .34));
     const g = ctx2d.createLinearGradient(0, y, 0, y + bh);
     g.addColorStop(0, "#ffd08a");
     g.addColorStop(.52, "rgba(240,179,90,.42)");
     g.addColorStop(1, "#f0b35a");
     ctx2d.fillStyle = g;
-    ctx2d.fillRect(x + Math.max(1, bw * .16), y, Math.max(2, bw * .68), bh);
+    ctx2d.fillRect(x + (bw - barWidth) / 2, y, barWidth, bh);
   });
 }
 
@@ -3694,14 +3713,15 @@ function drawTrackWaveform(id) {
   if (!hasData) return;
   const bw = w / track.waveformData.length;
   track.waveformData.forEach((v, i) => {
-    const bh = Math.max(2, v * h * .82);
+    const bh = Math.max(3, Math.min(h * .94, v * h * 1.48));
     const x = i * bw, y = (h - bh) / 2;
+    const barWidth = Math.max(1, Math.min(2, bw * .34));
     const g = ctx.createLinearGradient(0, y, 0, y + bh);
     g.addColorStop(0, "rgba(147,183,255,.9)");
     g.addColorStop(.5, "rgba(147,183,255,.38)");
     g.addColorStop(1, "rgba(147,183,255,.8)");
     ctx.fillStyle = g;
-    ctx.fillRect(x + Math.max(1, bw * .16), y, Math.max(2, bw * .68), bh);
+    ctx.fillRect(x + (bw - barWidth) / 2, y, barWidth, bh);
   });
 }
 
@@ -3763,7 +3783,10 @@ function resetZoom(which) {
   const zoomInput    = isLoop ? els.waveZoom        : tracksEls[which].zoom;
   const zoomReadout  = isLoop ? els.waveZoomReadout : tracksEls[which].zoomReadout;
   if (isLoop) state.loopZoom = 1; else state.tracks[which].zoom = 1;
-  if (zoomInput) zoomInput.value = 1;
+  if (zoomInput) {
+    zoomInput.value = 1;
+    updateRangeFill(zoomInput);
+  }
   if (zoomReadout) zoomReadout.textContent = "1.0x";
   applyZoom(which, 1);
 }
@@ -3777,6 +3800,7 @@ els.waveZoom.addEventListener("input", () => {
   const level = parseFloat(els.waveZoom.value);
   state.loopZoom = level;
   els.waveZoomReadout.textContent = level.toFixed(1) + "x";
+  updateRangeFill(els.waveZoom);
   applyZoom("loop", level);
 });
 
@@ -3787,9 +3811,13 @@ trackIds.forEach(id => {
     const level = parseFloat(zoomInput.value);
     state.tracks[id].zoom = level;
     tracksEls[id].zoomReadout.textContent = level.toFixed(1) + "x";
+    updateRangeFill(zoomInput);
     applyZoom(id, level);
   });
 });
+
+updateRangeFill(els.waveZoom);
+trackIds.forEach(id => updateRangeFill(tracksEls[id].zoom));
 
 /* ─── TRIM SYSTEM ─── */
 
