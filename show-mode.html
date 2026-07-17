@@ -559,6 +559,21 @@
   let isPlaying = false;
   let fadeInterval = null;
   const FADE_DURATION = 3; // seconds
+  const EQ_FREQUENCIES = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+  const EQ_LABELS = ['31', '62', '125', '250', '500', '1K', '2K', '4K', '8K', '16K'];
+  const EQ_PRESETS = {
+    flat: [0,0,0,0,0,0,0,0,0,0], live: [2,1,0,-1,-1,1,2,2,1,0],
+    vocal: [-3,-2,-1,0,1,3,4,3,1,0], warm: [3,3,2,1,0,-1,-1,0,1,1],
+    clarity: [-2,-1,0,-1,0,2,3,4,3,2]
+  };
+  let eqValues;
+  try { eqValues = JSON.parse(localStorage.getItem('ayun-show-eq')) || [0, ...EQ_PRESETS.flat]; }
+  catch (_) { eqValues = [0, ...EQ_PRESETS.flat]; }
+  if (!Array.isArray(eqValues) || eqValues.length !== 11) eqValues = [0, ...EQ_PRESETS.flat];
+  let eqBypassed = false;
+  let mediaSourceNode = null;
+  let eqInputGain = null;
+  let eqFilters = [];
 
   // ── PERSISTENCIA (IndexedDB) ──
   // Guarda los archivos de audio (blobs) + nombre + orden, para que el
@@ -677,6 +692,10 @@
   const visualizerCanvas = document.getElementById('visualizer-canvas');
   const visualizerCtx = visualizerCanvas.getContext('2d');
   const visualizerIdle = document.getElementById('visualizer-idle');
+  const equalizerBands = document.getElementById('equalizer-bands');
+  const eqPreset = document.getElementById('eq-preset');
+  const eqReset = document.getElementById('eq-reset');
+  const eqBypass = document.getElementById('eq-bypass');
 
 
   // ── HELPERS ──
@@ -1149,7 +1168,8 @@
 
   // ── FILE HANDLING ──
   function addFiles(fileList) {
-    const audioFiles = Array.from(fileList).filter(f => f.type.startsWith('audio/'));
+    const audioExtensions = /\.(mp3|wav|wave|m4a|aac|ogg|oga|flac|opus|webm)$/i;
+    const audioFiles = Array.from(fileList).filter(f => f.type.startsWith('audio/') || audioExtensions.test(f.name));
     if (audioFiles.length === 0) return;
     audioFiles.forEach(file => {
       const song = {
