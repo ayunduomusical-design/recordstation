@@ -282,7 +282,31 @@
     white-space: nowrap;
   }
 
-  .visualizer-wrap {
+  /* Ecualizador profesional */
+  .equalizer-panel { margin-bottom:16px;padding:14px;border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),#11100f;background-size:20px 20px; }
+  .equalizer-header { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px; }
+  .equalizer-heading { display:grid;gap:3px; }
+  .equalizer-title { margin:0;color:var(--amber-2);font:700 11px var(--mono);letter-spacing:.14em;text-transform:uppercase; }
+  .equalizer-subtitle { color:var(--soft);font:9px var(--mono);letter-spacing:.08em;text-transform:uppercase; }
+  .equalizer-actions { display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap; }
+  .eq-preset { min-height:32px;padding:0 28px 0 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2);color:var(--muted);font:10px var(--mono);cursor:pointer; }
+  .eq-btn { min-height:32px;padding:0 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2);color:var(--muted);font:700 9px var(--mono);letter-spacing:.08em;text-transform:uppercase; }
+  .eq-btn:hover { border-color:rgba(240,179,90,.4);color:var(--amber-2); }
+  .eq-btn.active { border-color:var(--red);background:rgba(255,107,95,.1);color:#ffaaa3; }
+  .equalizer-scroll { overflow-x:auto;padding:3px 2px 8px;scrollbar-color:var(--line-hi) transparent; }
+  .equalizer-bands { display:grid;grid-template-columns:repeat(11,minmax(48px,1fr));gap:8px;min-width:650px; }
+  .eq-band { display:grid;grid-template-rows:20px 130px 18px;justify-items:center;gap:6px; }
+  .eq-value,.eq-frequency { font-family:var(--mono);font-size:9px; }
+  .eq-value { color:var(--amber-2);font-variant-numeric:tabular-nums; }
+  .eq-frequency { color:var(--soft);letter-spacing:.03em;text-transform:uppercase; }
+  .eq-band input[type="range"] { width:130px;height:24px;margin:53px -41px;appearance:none;background:transparent;cursor:ns-resize;transform:rotate(-90deg); }
+  .eq-band input[type="range"]::-webkit-slider-runnable-track { height:4px;border-radius:999px;background:linear-gradient(90deg,var(--panel-3) 0 50%,rgba(240,179,90,.65) 50% 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05); }
+  .eq-band input[type="range"]::-webkit-slider-thumb { appearance:none;width:18px;height:12px;margin-top:-4px;border:1px solid var(--amber-2);border-radius:3px;background:#2b251c;box-shadow:0 0 10px rgba(240,179,90,.25); }
+  .eq-band input[type="range"]::-moz-range-track { height:4px;border-radius:999px;background:var(--panel-3); }
+  .eq-band input[type="range"]::-moz-range-progress { height:4px;background:var(--amber); }
+  .eq-band input[type="range"]::-moz-range-thumb { width:18px;height:12px;border:1px solid var(--amber-2);border-radius:3px;background:#2b251c; }
+  .equalizer-scale { display:flex;justify-content:space-between;margin-top:7px;color:var(--soft);font:8px var(--mono);text-transform:uppercase; }
+
     position: relative;
     width: 100%;
     height: 96px;
@@ -441,6 +465,8 @@
     .shell { padding: 16px 0; }
     .player-controls { grid-template-columns: 1fr; gap: 10px; }
     .play-btn, .stop-btn { justify-self: center; }
+    .equalizer-header { align-items:flex-start;flex-direction:column; }
+    .equalizer-actions { justify-content:flex-start; }
   }
 </style>
 </head>
@@ -481,7 +507,17 @@
       <span class="now-playing-label">Reproduciendo</span>
       <div class="now-playing-title" id="now-playing-title">—</div>
     </div>
-    <div class="visualizer-wrap" id="visualizer-wrap">
+    <div class="equalizer-panel" aria-labelledby="equalizer-title">
+      <div class="equalizer-header">
+        <div class="equalizer-heading"><h2 class="equalizer-title" id="equalizer-title">Ecualizador profesional</h2><span class="equalizer-subtitle">10 bandas · ±12 dB · Q 1.4</span></div>
+        <div class="equalizer-actions">
+          <select class="eq-preset" id="eq-preset" aria-label="Preset de ecualización"><option value="flat">Plano</option><option value="live">Show en vivo</option><option value="vocal">Voz al frente</option><option value="warm">Cálido</option><option value="clarity">Claridad</option></select>
+          <button class="eq-btn" id="eq-reset" type="button">Reset</button><button class="eq-btn" id="eq-bypass" type="button" aria-pressed="false">Bypass</button>
+        </div>
+      </div>
+      <div class="equalizer-scroll"><div class="equalizer-bands" id="equalizer-bands"></div></div>
+      <div class="equalizer-scale"><span>−12 dB</span><span>0 dB</span><span>+12 dB</span></div>
+    </div>
       <canvas id="visualizer-canvas"></canvas>
       <div class="visualizer-idle" id="visualizer-idle">Sin señal</div>
     </div>
@@ -642,6 +678,7 @@
   const visualizerCtx = visualizerCanvas.getContext('2d');
   const visualizerIdle = document.getElementById('visualizer-idle');
 
+
   // ── HELPERS ──
   function formatTime(sec) {
     if (!isFinite(sec) || sec < 0) return '0:00';
@@ -670,6 +707,16 @@
   }
 
   // ── SETLIST RENDER ──
+  function formatDb(value){const n=Number(value);return(n>0?'+':'')+n.toFixed(1)+' dB';}
+  function applyEqualizerValues(){if(eqInputGain)eqInputGain.gain.value=eqBypassed?1:Math.pow(10,Number(eqValues[0])/20);eqFilters.forEach((filter,index)=>filter.gain.value=eqBypassed?0:Number(eqValues[index+1]));try{localStorage.setItem('ayun-show-eq',JSON.stringify(eqValues));}catch(_){}}
+  function renderEqualizer(){equalizerBands.innerHTML='';['PRE',...EQ_LABELS].forEach((label,index)=>{const band=document.createElement('label');band.className='eq-band';band.innerHTML=`<span class="eq-value">${formatDb(eqValues[index])}</span><input type="range" min="-12" max="12" step="0.5" value="${eqValues[index]}" aria-label="${index===0?'Preamplificador':'Banda '+label+' hercios'}"><span class="eq-frequency">${label}</span>`;const slider=band.querySelector('input'),value=band.querySelector('.eq-value');slider.addEventListener('input',()=>{eqValues[index]=Number(slider.value);value.textContent=formatDb(slider.value);eqPreset.value='flat';applyEqualizerValues();});equalizerBands.appendChild(band);});}
+  function ensureEqualizerGraph(){const ctx=getAudioCtx();if(!eqInputGain){eqInputGain=ctx.createGain();eqFilters=EQ_FREQUENCIES.map((frequency,index)=>{const filter=ctx.createBiquadFilter();filter.type=index===0?'lowshelf':(index===EQ_FREQUENCIES.length-1?'highshelf':'peaking');filter.frequency.value=frequency;filter.Q.value=1.4;return filter;});let node=eqInputGain;eqFilters.forEach(filter=>{node.connect(filter);node=filter;});node.connect(ctx.destination);applyEqualizerValues();}return ctx;}
+  function connectAudioToEqualizer(){if(!audio)return;try{const ctx=ensureEqualizerGraph();mediaSourceNode=ctx.createMediaElementSource(audio);mediaSourceNode.connect(eqInputGain);}catch(err){console.error('No se pudo conectar el ecualizador:',err);}}
+  eqPreset.addEventListener('change',()=>{eqValues=[0,...(EQ_PRESETS[eqPreset.value]||EQ_PRESETS.flat)];renderEqualizer();applyEqualizerValues();});
+  eqReset.addEventListener('click',()=>{eqPreset.value='flat';eqValues=[0,...EQ_PRESETS.flat];renderEqualizer();applyEqualizerValues();});
+  eqBypass.addEventListener('click',()=>{eqBypassed=!eqBypassed;eqBypass.classList.toggle('active',eqBypassed);eqBypass.setAttribute('aria-pressed',String(eqBypassed));applyEqualizerValues();});
+  renderEqualizer();
+
   function renderSetlist() {
     setlistEl.innerHTML = '';
     if (songs.length === 0) {
@@ -903,11 +950,13 @@
   function createAudio(url) {
     if (audio) {
       audio.pause();
+      if (mediaSourceNode) { mediaSourceNode.disconnect(); mediaSourceNode = null; }
       audio.src = '';
       audio = null;
     }
     audio = new Audio(url);
     audio.volume = Number(volumeSlider.value) / 100;
+    connectAudioToEqualizer();
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('ended', onSongEnded);
     audio.addEventListener('loadedmetadata', () => {
