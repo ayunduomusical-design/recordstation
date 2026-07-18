@@ -2293,9 +2293,11 @@ function defaultGateValues() {
   return { threshold: -45, range: -60, attack: 3, release: 150, hold: 60, bypassed: true };
 }
 function defaultHumValues() {
-  // Filtro Notch quirurgico anti-zumbido electrico (frecuencia de red +
-  // primer armonico). Chile opera a 50 Hz, por eso el valor por defecto.
-  return { enabled: false, freq: 50, q: 30 };
+  // Filtro Notch quirurgico anti-zumbido electrico. Elimina a la vez el
+  // zumbido de red de 50 Hz (Chile/Europa) y de 60 Hz (EE.UU. y otros
+  // paises), junto con su primer armonico (100 Hz y 120 Hz), sin necesidad
+  // de elegir una sola frecuencia: cubre ambos casos simultaneamente.
+  return { enabled: true, q: 30 };
 }
 const state = {
   audioCtx: null,
@@ -2615,38 +2617,45 @@ function ensureEQChains() {
   ensureHumChains();
 }
 
-/* ─── FILTRO NOTCH QUIRURGICO ANTI-ZUMBIDO (50/60 Hz) ───
+/* ─── FILTRO NOTCH QUIRURGICO ANTI-ZUMBIDO (50 Hz + 60 Hz) ───
    Se ubica ANTES de la puerta de ruido en la cadena de cada pista y del
    loop: fuente → filtro notch → puerta de ruido → ecualizador → salida
-   general. Ataca la frecuencia fundamental de la red electrica (50 Hz en
-   Chile) y su primer armonico (100 Hz) con dos filtros "notch" en serie
-   y Q alto, para eliminar el zumbido sin tocar el resto del espectro.
+   general. Ataca a la vez la frecuencia fundamental de la red electrica de
+   50 Hz (Chile, Europa) y de 60 Hz (EE.UU. y otros paises), junto con su
+   primer armonico (100 Hz y 120 Hz), con cuatro filtros "notch" en serie
+   y Q alto, para eliminar el zumbido sin tocar el resto del espectro,
+   sin importar en que pais o con que equipo se grabo. Al estar siempre
+   activo (y no ser una puerta de ruido), sigue funcionando igual tanto en
+   los silencios como mientras suena musica y/o voz, sin cortar la señal.
    Cuando esta desactivado, una mezcla seca/humeda (dry/wet) deja pasar
    la senal intacta sin reconstruir el grafo de audio. */
+const HUM_FILTER_FREQUENCIES = [50, 100, 60, 120];
 function createHumChain(ctx, values) {
   const input = ctx.createGain();
   const dry = ctx.createGain();
   const wet = ctx.createGain();
-  const notchFundamental = ctx.createBiquadFilter();
-  notchFundamental.type = "notch";
-  const notchHarmonic = ctx.createBiquadFilter();
-  notchHarmonic.type = "notch";
+  const notches = HUM_FILTER_FREQUENCIES.map(() => {
+    const filter = ctx.createBiquadFilter();
+    filter.type = "notch";
+    return filter;
+  });
   const output = ctx.createGain();
   input.connect(dry); dry.connect(output);
-  input.connect(notchFundamental); notchFundamental.connect(notchHarmonic); notchHarmonic.connect(wet); wet.connect(output);
-  const chain = { input, output, dry, wet, notchFundamental, notchHarmonic };
+  let node = input;
+  notches.forEach(filter => { node.connect(filter); node = filter; });
+  node.connect(wet); wet.connect(output);
+  const chain = { input, output, dry, wet, notches };
   applyHumState(values, chain);
   return chain;
 }
 
 function applyHumState(values, chain) {
   if (!values || !chain) return;
-  const freq = Number(values.freq || 50);
   const q = Number(values.q || 30);
-  chain.notchFundamental.frequency.value = freq;
-  chain.notchFundamental.Q.value = q;
-  chain.notchHarmonic.frequency.value = freq * 2;
-  chain.notchHarmonic.Q.value = q;
+  chain.notches.forEach((filter, index) => {
+    filter.frequency.value = HUM_FILTER_FREQUENCIES[index];
+    filter.Q.value = q;
+  });
   const enabled = !!values.enabled;
   chain.dry.gain.value = enabled ? 0 : 1;
   chain.wet.gain.value = enabled ? 1 : 0;
@@ -2922,20 +2931,18 @@ function renderNoiseGate(target,values,getNodes){
 renderNoiseGate("loop",state.loopGateValues,()=>state.loopGateNode);
 trackIds.forEach(id=>renderNoiseGate(id,state.tracks[id].gateValues,()=>state.tracks[id].gateNode));
 
-/* ─── UI: FILTRO NOTCH QUIRURGICO ANTI-ZUMBIDO (50/60 Hz) ─── */
+/* ─── UI: FILTRO NOTCH QUIRURGICO ANTI-ZUMBIDO (50 Hz + 60 Hz) ─── */
 function formatHumQ(value){return "Q "+Math.round(Number(value));}
 function renderHumFilter(target,values,getNodes){
   const panel=document.querySelector(`[data-hum-target="${target}"]`);if(!panel)return;
   const title=panel.dataset.humTitle||target;
   panel.classList.toggle("disabled",!values.enabled);
-  panel.innerHTML=`<div class="pro-hum-header"><div class="pro-hum-heading"><div><div class="pro-hum-title">Filtro Notch anti-zumbido · ${title}</div><div class="pro-hum-subtitle">Elimina el zumbido de la red electrica (50/60 Hz)</div></div></div><div class="pro-hum-actions"><button class="pro-hum-btn pro-hum-toggle${values.enabled?" active":""}" type="button" aria-pressed="${values.enabled}">${values.enabled?"Desactivar":"Activar"}</button></div></div><div class="pro-hum-grid"><div class="pro-hum-control"><div class="pro-hum-control-top"><span class="pro-hum-label">Frecuencia de red</span></div><select class="pro-hum-select" aria-label="Frecuencia de red de ${title}"><option value="50">50 Hz (Chile / Europa)</option><option value="60">60 Hz (EE.UU.)</option></select></div><div class="pro-hum-control"><div class="pro-hum-control-top"><span class="pro-hum-label">Precision (Q)</span><span class="pro-hum-value">${formatHumQ(values.q)}</span></div><input type="range" min="10" max="60" step="1" value="${values.q}" aria-label="Precision del filtro de ${title}"></div></div>`;
-  const toggle=panel.querySelector(".pro-hum-toggle"),select=panel.querySelector(".pro-hum-select"),slider=panel.querySelector('input[type="range"]'),readout=panel.querySelector(".pro-hum-value");
-  select.value=String(values.freq||50);
+  panel.innerHTML=`<div class="pro-hum-header"><div class="pro-hum-heading"><div><div class="pro-hum-title">Filtro Notch anti-zumbido · ${title}</div><div class="pro-hum-subtitle">Elimina a la vez el zumbido de 50 Hz y 60 Hz (y sus armonicos), en silencios y con musica/voz</div></div></div><div class="pro-hum-actions"><button class="pro-hum-btn pro-hum-toggle${values.enabled?" active":""}" type="button" aria-pressed="${values.enabled}">${values.enabled?"Desactivar":"Activar"}</button></div></div><div class="pro-hum-grid"><div class="pro-hum-control"><div class="pro-hum-control-top"><span class="pro-hum-label">Precision (Q)</span><span class="pro-hum-value">${formatHumQ(values.q)}</span></div><input type="range" min="10" max="60" step="1" value="${values.q}" aria-label="Precision del filtro de ${title}"></div></div>`;
+  const toggle=panel.querySelector(".pro-hum-toggle"),slider=panel.querySelector('input[type="range"]'),readout=panel.querySelector(".pro-hum-value");
   toggle.addEventListener("click",()=>{
     values.enabled=!values.enabled;
     renderHumFilter(target,values,getNodes);applyHumState(values,getNodes());
   });
-  select.addEventListener("change",()=>{values.freq=Number(select.value);applyHumState(values,getNodes());});
   slider.addEventListener("input",()=>{const v=Number(slider.value);values.q=v;readout.textContent=formatHumQ(v);applyHumState(values,getNodes());});
 }
 renderHumFilter("loop",state.loopHumValues,()=>state.loopHumNode);
