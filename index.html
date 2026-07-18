@@ -2295,11 +2295,13 @@ function defaultGateValues() {
 function defaultHumValues() {
   // Filtro Notch quirurgico anti-zumbido electrico. Elimina a la vez el
   // zumbido de red de 50 Hz (Chile/Europa) y de 60 Hz (EE.UU. y otros
-  // paises), junto con su primer armonico (100 Hz y 120 Hz), sin necesidad
-  // de elegir una sola frecuencia: cubre ambos casos simultaneamente.
-  // Queda desactivado por defecto (opt-in) para no interferir con la
-  // grabacion/reproduccion normal; se activa con un clic en el panel.
-  return { enabled: false, q: 25 };
+  // paises), junto con sus armonicos, sin necesidad de elegir una sola
+  // frecuencia: cubre ambos casos simultaneamente. Activado por defecto
+  // (opt-out): al ser quirurgico (solo ataca esas frecuencias exactas) no
+  // degrada el resto de la señal, asi que conviene que actue siempre desde
+  // el instante en que se graba. El usuario puede desactivarlo con un clic
+  // en el panel si lo necesita.
+  return { enabled: true, q: 25 };
 }
 const state = {
   audioCtx: null,
@@ -2340,6 +2342,7 @@ const state = {
   recWorkletNode: null,
   recSilentGain: null,
   recMediaDestination: null,
+  captureHumNode: null,
   activeRouting: null,
   recChannelUsed: null,
   loopSeek: 0,
@@ -2663,6 +2666,19 @@ function applyHumState(values, chain) {
   const enabled = !!values.enabled;
   chain.dry.gain.value = enabled ? 0 : 1;
   chain.wet.gain.value = enabled ? 1 : 0;
+}
+
+// Desconecta y libera por completo una cadena de filtro anti-zumbido creada
+// con createHumChain (usada para filtrar en vivo durante la captura, ver
+// captureHumNode mas abajo). No toca las cadenas "permanentes" del loop/
+// pistas (loopHumNode / track.humNode), que viven mientras dura la sesion.
+function disconnectHumChain(chain) {
+  if (!chain) return;
+  try { chain.input.disconnect(); } catch (e) {}
+  try { chain.dry.disconnect(); } catch (e) {}
+  try { chain.wet.disconnect(); } catch (e) {}
+  chain.notches.forEach(filter => { try { filter.disconnect(); } catch (e) {} });
+  try { chain.output.disconnect(); } catch (e) {}
 }
 
 function ensureHumChains() {
@@ -3260,6 +3276,10 @@ function teardownRecordingGraph(targetId) {
     try { state.recMediaDestination.disconnect(); } catch (e) {}
     state.recMediaDestination = null;
   }
+  if (state.captureHumNode) {
+    disconnectHumChain(state.captureHumNode);
+    state.captureHumNode = null;
+  }
   if (state.activeRouting) {
     try { state.activeRouting.inputSource.disconnect(); } catch (e) {}
     if (state.activeRouting.splitter) { try { state.activeRouting.splitter.disconnect(); } catch (e) {} }
@@ -3670,9 +3690,18 @@ async function startRecording() {
   state.recChannelUsed = routing.channelUsed;
   updateChannelStatus(routing.channelUsed, routing, els.inputChannel);
 
+  // Filtro anti-zumbido electrico (50/60 Hz + armonicos) insertado ANTES del
+  // analizador y del capturador PCM: asi la señal queda libre de zumbido
+  // desde el instante mismo en que se graba -tanto en silencios como
+  // mientras suena musica o voz encima-, en vez de depender solo de la
+  // puerta de ruido (que solo silencia los huecos, no filtra el zumbido que
+  // queda mezclado con la señal real).
+  state.captureHumNode = createHumChain(state.audioCtx, state.loopHumValues);
+  routing.connectTo(state.captureHumNode.input);
+
   state.analyser = state.audioCtx.createAnalyser();
   state.analyser.fftSize = 512;
-  routing.connectTo(state.analyser);
+  state.captureHumNode.output.connect(state.analyser);
 
   state.recordedChunks = [];
   const workletOk = await ensurePCMWorklet();
@@ -3697,11 +3726,11 @@ async function startRecording() {
   startCountIn(() => {
     if (state.activeTarget !== "main") return;
     if (workletOk) {
-      routing.connectTo(state.recWorkletNode); // recien aqui empieza a capturarse audio (no durante el cuenta-in)
+      state.captureHumNode.output.connect(state.recWorkletNode); // recien aqui empieza a capturarse audio (no durante el cuenta-in)
       state.isRecording = true;
     } else {
       if (!state.mediaRecorder) return;
-      routing.connectTo(state.recMediaDestination);
+      state.captureHumNode.output.connect(state.recMediaDestination);
       state.mediaRecorder.start();
       state.isRecording = true;
     }
@@ -3727,13 +3756,13 @@ async function stopRecording() {
 
   if (state.usingWorklet && state.recWorkletNode && state.activeRouting) {
     const node = state.recWorkletNode;
-    state.activeRouting.disconnectFrom(node); // corta la entrada de audio ya mismo
+    if (state.captureHumNode) { try { state.captureHumNode.output.disconnect(node); } catch (e) {} } // corta la entrada de audio ya mismo
     await waitForWorkletFlush(node);           // espera confirmacion real del ultimo bloque (no un tiempo fijo)
     state.activeTarget = null;
     finalizeCapture("main");
   } else if (state.mediaRecorder) {
-    if (state.activeRouting && state.recMediaDestination) {
-      state.activeRouting.disconnectFrom(state.recMediaDestination);
+    if (state.captureHumNode && state.recMediaDestination) {
+      try { state.captureHumNode.output.disconnect(state.recMediaDestination); } catch (e) {}
     }
     state.mediaRecorder.addEventListener("stop", () => { state.activeTarget = null; finalizeCapture("main"); }, { once: true });
     state.mediaRecorder.stop();
@@ -3766,9 +3795,15 @@ async function startTrackRecording(id, onStarted) {
   state.recChannelUsed = routing.channelUsed;
   updateChannelStatus(routing.channelUsed, routing, trackChannelEl);
 
+  // Mismo filtro anti-zumbido en vivo que en la grabacion principal, pero
+  // usando los valores propios de esta pista (state.captureHumNode se
+  // reutiliza porque nunca hay mas de una grabacion "simple" activa a la vez).
+  state.captureHumNode = createHumChain(state.audioCtx, track.humValues);
+  routing.connectTo(state.captureHumNode.input);
+
   track.analyser = state.audioCtx.createAnalyser();
   track.analyser.fftSize = 512;
-  routing.connectTo(track.analyser);
+  state.captureHumNode.output.connect(track.analyser);
 
   state.recordedChunks = [];
   const workletOk = await ensurePCMWorklet();
@@ -3799,11 +3834,11 @@ async function startTrackRecording(id, onStarted) {
     // podria introducir un pequeño retraso entre ambas.
     const syncTime = state.audioCtx.currentTime;
     if (workletOk) {
-      routing.connectTo(state.recWorkletNode);
+      state.captureHumNode.output.connect(state.recWorkletNode);
       track.isRecording = true;
     } else {
       if (!state.mediaRecorder) return;
-      routing.connectTo(state.recMediaDestination);
+      state.captureHumNode.output.connect(state.recMediaDestination);
       state.mediaRecorder.start();
       track.isRecording = true;
     }
@@ -3838,13 +3873,13 @@ async function stopTrackRecording(id) {
 
   if (state.usingWorklet && state.recWorkletNode && state.activeRouting) {
     const node = state.recWorkletNode;
-    state.activeRouting.disconnectFrom(node);
+    if (state.captureHumNode) { try { state.captureHumNode.output.disconnect(node); } catch (e) {} }
     await waitForWorkletFlush(node);
     state.activeTarget = null;
     finalizeCapture(id);
   } else if (state.mediaRecorder) {
-    if (state.activeRouting && state.recMediaDestination) {
-      state.activeRouting.disconnectFrom(state.recMediaDestination);
+    if (state.captureHumNode && state.recMediaDestination) {
+      try { state.captureHumNode.output.disconnect(state.recMediaDestination); } catch (e) {}
     }
     state.mediaRecorder.addEventListener("stop", () => { state.activeTarget = null; finalizeCapture(id); }, { once: true });
     state.mediaRecorder.stop();
@@ -5502,8 +5537,17 @@ async function startDualTrackRecording() {
 
   const routing1 = prepareInputRouting(stream1, tracksEls.track1.channelSelect);
   const routing2 = prepareInputRouting(stream2, tracksEls.track2.channelSelect);
+
+  // Filtro anti-zumbido en vivo, independiente para cada entrada (cada
+  // pista puede tener su propio Q/estado), insertado antes del analizador
+  // y de los capturadores PCM de cada una.
+  const humNode1 = createHumChain(state.audioCtx, state.tracks.track1.humValues);
+  const humNode2 = createHumChain(state.audioCtx, state.tracks.track2.humValues);
+  routing1.connectTo(humNode1.input);
+  routing2.connectTo(humNode2.input);
+
   const analyser = state.audioCtx.createAnalyser(); analyser.fftSize = 512;
-  routing1.connectTo(analyser);
+  humNode1.output.connect(analyser);
   state.tracks.mix.analyser = analyser;
 
   const node1 = new AudioWorkletNode(state.audioCtx, PCM_WORKLET_NAME);
@@ -5515,7 +5559,7 @@ async function startDualTrackRecording() {
   node1.port.onmessage = ev => { if (ev.data instanceof Float32Array) chunks1.push(ev.data); };
   node2.port.onmessage = ev => { if (ev.data instanceof Float32Array) chunks2.push(ev.data); };
 
-  state.multiTrackRecording = { streams: [...new Set([stream1, stream2])], routing1, routing2, node1, node2, silentGain, chunks1, chunks2 };
+  state.multiTrackRecording = { streams: [...new Set([stream1, stream2])], routing1, routing2, humNode1, humNode2, node1, node2, silentGain, chunks1, chunks2 };
   state.activeTarget = "mix";
   setTrackStatus("track1", "countin");
   setTrackStatus("track2", "countin");
@@ -5523,8 +5567,8 @@ async function startDualTrackRecording() {
 
   startCountIn(() => {
     if (!state.multiTrackRecording) return;
-    routing1.connectTo(node1);
-    routing2.connectTo(node2);
+    humNode1.output.connect(node1);
+    humNode2.output.connect(node2);
     state.tracks.track1.isRecording = true;
     state.tracks.track2.isRecording = true;
     state.tracks.mix.isRecording = true;
@@ -5546,10 +5590,12 @@ async function stopDualTrackRecording() {
   state.tracks.track2.isRecording = false;
   state.tracks.mix.isRecording = false;
   cancelAnimationFrame(state.tracks.mix.liveRAF);
-  try { rec.routing1.disconnectFrom(rec.node1); } catch (e) {}
-  try { rec.routing2.disconnectFrom(rec.node2); } catch (e) {}
+  try { rec.humNode1.output.disconnect(rec.node1); } catch (e) {}
+  try { rec.humNode2.output.disconnect(rec.node2); } catch (e) {}
   await Promise.all([waitForWorkletFlush(rec.node1), waitForWorkletFlush(rec.node2)]);
   try { rec.node1.disconnect(); rec.node2.disconnect(); rec.silentGain.disconnect(); } catch (e) {}
+  disconnectHumChain(rec.humNode1);
+  disconnectHumChain(rec.humNode2);
   try { rec.routing1.inputSource.disconnect(); rec.routing2.inputSource.disconnect(); } catch (e) {}
   rec.streams.forEach(stream => stream.getTracks().forEach(t => t.stop()));
   state.multiTrackRecording = null;
