@@ -1326,7 +1326,7 @@
   .pro-eq-value { color:var(--amber-2); font-variant-numeric:tabular-nums; }
   .pro-eq-frequency { color:var(--soft); letter-spacing:.02em; text-transform:uppercase; }
   .pro-eq-band input[type="range"] { width:90px; height:20px; margin:35px -24px; appearance:none; background:transparent; cursor:ns-resize; transform:rotate(-90deg); }
-  .pro-eq-band input[type="range"]::-webkit-slider-runnable-track { height:3px; border-radius:999px; background:linear-gradient(90deg,var(--panel-3) 0 50%,rgba(240,179,90,.65) 50% 100%); }
+  .pro-eq-band input[type="range"]::-webkit-slider-runnable-track { height:3px; border-radius:999px; background:linear-gradient(90deg,var(--panel-3) 0 var(--fill,50%),rgba(240,179,90,.65) var(--fill,50%) 100%); }
   .pro-eq-band input[type="range"]::-webkit-slider-thumb { appearance:none; width:14px; height:10px; margin-top:-4px; border:1px solid var(--amber-2); border-radius:3px; background:#2b251c; box-shadow:0 0 8px rgba(240,179,90,.25); }
   .pro-eq-band input[type="range"]::-moz-range-track { height:3px; border-radius:999px; background:var(--panel-3); }
   .pro-eq-band input[type="range"]::-moz-range-progress { height:3px; background:var(--amber); }
@@ -2301,7 +2301,7 @@ function defaultHumValues() {
   // degrada el resto de la señal, asi que conviene que actue siempre desde
   // el instante en que se graba. El usuario puede desactivarlo con un clic
   // en el panel si lo necesita.
-  return { enabled: true, q: 25 };
+  return { enabled: true, q: 12 };
 }
 const state = {
   audioCtx: null,
@@ -2627,8 +2627,9 @@ function ensureEQChains() {
    loop: fuente → filtro notch → puerta de ruido → ecualizador → salida
    general. Ataca a la vez la frecuencia fundamental de la red electrica de
    50 Hz (Chile, Europa) y de 60 Hz (EE.UU. y otros paises), junto con sus
-   armonicos 2°, 3° y 4° (100/150/200/250 Hz y 120/180/240/300 Hz), con diez
-   filtros "notch" en serie y Q alto, para eliminar el zumbido -incluido el
+   armonicos 2° al 7°/8° (100/150/200/250/300/350/400 Hz y
+   120/180/240/300/360/420/480 Hz), con dieciseis filtros "notch" en serie
+   (Q ajustable, mas bajo = notch mas ancho), para eliminar el zumbido -incluido el
    que sigue sonando debajo de la musica/voz por los armonicos altos- sin
    tocar el resto del espectro,
    sin importar en que pais o con que equipo se grabo. Al estar siempre
@@ -2636,7 +2637,7 @@ function ensureEQChains() {
    los silencios como mientras suena musica y/o voz, sin cortar la señal.
    Cuando esta desactivado, una mezcla seca/humeda (dry/wet) deja pasar
    la senal intacta sin reconstruir el grafo de audio. */
-const HUM_FILTER_FREQUENCIES = [50, 100, 150, 200, 250, 60, 120, 180, 240, 300];
+const HUM_FILTER_FREQUENCIES = [50, 100, 150, 200, 250, 300, 350, 400, 60, 120, 180, 240, 300, 360, 420, 480];
 function createHumChain(ctx, values) {
   const input = ctx.createGain();
   const dry = ctx.createGain();
@@ -2658,7 +2659,7 @@ function createHumChain(ctx, values) {
 
 function applyHumState(values, chain) {
   if (!values || !chain) return;
-  const q = Number(values.q || 30);
+  const q = Number(values.q || 12);
   chain.notches.forEach((filter, index) => {
     filter.frequency.value = HUM_FILTER_FREQUENCIES[index];
     filter.Q.value = q;
@@ -2905,7 +2906,7 @@ function renderProfessionalEQ(target,values,getNodes){
   const bandsEl=panel.querySelector(".pro-eq-bands"),preset=panel.querySelector(".pro-eq-preset"),bypass=panel.querySelector(".pro-eq-bypass");
   preset.value=values.preset||"flat";
   const allValues=[values.preamp,...values.bands];
-  ["PRE",...EQ_LABELS].forEach((label,index)=>{const band=document.createElement("label");band.className="pro-eq-band";band.innerHTML=`<span class="pro-eq-value">${formatEQDb(allValues[index])}</span><input type="range" min="-12" max="12" step="0.5" value="${allValues[index]}" aria-label="${index===0?"Preamplificador de "+title:"Banda "+label+" hercios de "+title}"><span class="pro-eq-frequency">${label}</span>`;const slider=band.querySelector("input"),readout=band.querySelector(".pro-eq-value");slider.addEventListener("input",()=>{const v=Number(slider.value);if(index===0)values.preamp=v;else values.bands[index-1]=v;readout.textContent=formatEQDb(v);values.preset="flat";preset.value="flat";applyEQState(values,getNodes());});bandsEl.appendChild(band);});
+  ["PRE",...EQ_LABELS].forEach((label,index)=>{const band=document.createElement("label");band.className="pro-eq-band";band.innerHTML=`<span class="pro-eq-value">${formatEQDb(allValues[index])}</span><input type="range" min="-12" max="12" step="0.5" value="${allValues[index]}" aria-label="${index===0?"Preamplificador de "+title:"Banda "+label+" hercios de "+title}"><span class="pro-eq-frequency">${label}</span>`;const slider=band.querySelector("input"),readout=band.querySelector(".pro-eq-value");updateRangeFill(slider);slider.addEventListener("input",()=>{const v=Number(slider.value);if(index===0)values.preamp=v;else values.bands[index-1]=v;readout.textContent=formatEQDb(v);values.preset="flat";preset.value="flat";updateRangeFill(slider);applyEQState(values,getNodes());});bandsEl.appendChild(band);});
   panel.querySelector(".pro-eq-reset").addEventListener("click",()=>{values.preamp=0;values.bands=[...EQ_PRESETS.flat];values.preset="flat";renderProfessionalEQ(target,values,getNodes);applyEQState(values,getNodes());});
   preset.addEventListener("change",()=>{const selectedPreset=preset.value;values.preamp=0;values.bands=[...(EQ_PRESETS[selectedPreset]||EQ_PRESETS.flat)];values.preset=selectedPreset;renderProfessionalEQ(target,values,getNodes);applyEQState(values,getNodes());});
   bypass.classList.toggle("active",values.bypassed);bypass.addEventListener("click",()=>{values.bypassed=!values.bypassed;bypass.classList.toggle("active",values.bypassed);bypass.setAttribute("aria-pressed",String(values.bypassed));applyEQState(values,getNodes());});
@@ -2935,7 +2936,8 @@ function renderNoiseGate(target,values,getNodes){
     const currentValue=values[control.key];
     wrap.innerHTML=`<div class="pro-gate-control-top"><span class="pro-gate-label">${control.label}</span><span class="pro-gate-value">${control.format(currentValue)}</span></div><input type="range" min="${control.min}" max="${control.max}" step="${control.step}" value="${currentValue}" aria-label="${control.hint(control.label)} de ${title}">`;
     const slider=wrap.querySelector("input"),readout=wrap.querySelector(".pro-gate-value");
-    slider.addEventListener("input",()=>{const v=Number(slider.value);values[control.key]=v;readout.textContent=control.format(v);applyGateState(values,getNodes());});
+    updateRangeFill(slider);
+    slider.addEventListener("input",()=>{const v=Number(slider.value);values[control.key]=v;readout.textContent=control.format(v);updateRangeFill(slider);applyGateState(values,getNodes());});
     grid.appendChild(wrap);
   });
   panel.querySelector(".pro-gate-reset").addEventListener("click",()=>{
@@ -2957,13 +2959,14 @@ function renderHumFilter(target,values,getNodes){
   const panel=document.querySelector(`[data-hum-target="${target}"]`);if(!panel)return;
   const title=panel.dataset.humTitle||target;
   panel.classList.toggle("disabled",!values.enabled);
-  panel.innerHTML=`<div class="pro-hum-header"><div class="pro-hum-heading"><div><div class="pro-hum-title">Filtro Notch anti-zumbido · ${title}</div><div class="pro-hum-subtitle">Elimina a la vez el zumbido de 50 Hz y 60 Hz (y sus armonicos), en silencios y con musica/voz</div></div></div><div class="pro-hum-actions"><button class="pro-hum-btn pro-hum-toggle${values.enabled?" active":""}" type="button" aria-pressed="${values.enabled}">${values.enabled?"Desactivar":"Activar"}</button></div></div><div class="pro-hum-grid"><div class="pro-hum-control"><div class="pro-hum-control-top"><span class="pro-hum-label">Precision (Q)</span><span class="pro-hum-value">${formatHumQ(values.q)}</span></div><input type="range" min="8" max="40" step="1" value="${values.q}" aria-label="Precision del filtro de ${title}"></div></div>`;
+  panel.innerHTML=`<div class="pro-hum-header"><div class="pro-hum-heading"><div><div class="pro-hum-title">Filtro Notch anti-zumbido · ${title}</div><div class="pro-hum-subtitle">Elimina a la vez el zumbido de 50 Hz y 60 Hz (y sus armonicos), en silencios y con musica/voz</div></div></div><div class="pro-hum-actions"><button class="pro-hum-btn pro-hum-toggle${values.enabled?" active":""}" type="button" aria-pressed="${values.enabled}">${values.enabled?"Desactivar":"Activar"}</button></div></div><div class="pro-hum-grid"><div class="pro-hum-control"><div class="pro-hum-control-top"><span class="pro-hum-label">Precision (Q)</span><span class="pro-hum-value">${formatHumQ(values.q)}</span></div><input type="range" min="2" max="60" step="1" value="${values.q}" aria-label="Precision del filtro de ${title}"></div></div>`;
   const toggle=panel.querySelector(".pro-hum-toggle"),slider=panel.querySelector('input[type="range"]'),readout=panel.querySelector(".pro-hum-value");
+  updateRangeFill(slider);
   toggle.addEventListener("click",()=>{
     values.enabled=!values.enabled;
     renderHumFilter(target,values,getNodes);applyHumState(values,getNodes());
   });
-  slider.addEventListener("input",()=>{const v=Number(slider.value);values.q=v;readout.textContent=formatHumQ(v);applyHumState(values,getNodes());});
+  slider.addEventListener("input",()=>{const v=Number(slider.value);values.q=v;readout.textContent=formatHumQ(v);updateRangeFill(slider);applyHumState(values,getNodes());});
 }
 renderHumFilter("loop",state.loopHumValues,()=>state.loopHumNode);
 trackIds.forEach(id=>renderHumFilter(id,state.tracks[id].humValues,()=>state.tracks[id].humNode));
