@@ -2623,15 +2623,17 @@ function ensureEQChains() {
    Se ubica ANTES de la puerta de ruido en la cadena de cada pista y del
    loop: fuente → filtro notch → puerta de ruido → ecualizador → salida
    general. Ataca a la vez la frecuencia fundamental de la red electrica de
-   50 Hz (Chile, Europa) y de 60 Hz (EE.UU. y otros paises), junto con su
-   primer armonico (100 Hz y 120 Hz), con cuatro filtros "notch" en serie
-   y Q alto, para eliminar el zumbido sin tocar el resto del espectro,
+   50 Hz (Chile, Europa) y de 60 Hz (EE.UU. y otros paises), junto con sus
+   armonicos 2°, 3° y 4° (100/150/200/250 Hz y 120/180/240/300 Hz), con diez
+   filtros "notch" en serie y Q alto, para eliminar el zumbido -incluido el
+   que sigue sonando debajo de la musica/voz por los armonicos altos- sin
+   tocar el resto del espectro,
    sin importar en que pais o con que equipo se grabo. Al estar siempre
    activo (y no ser una puerta de ruido), sigue funcionando igual tanto en
    los silencios como mientras suena musica y/o voz, sin cortar la señal.
    Cuando esta desactivado, una mezcla seca/humeda (dry/wet) deja pasar
    la senal intacta sin reconstruir el grafo de audio. */
-const HUM_FILTER_FREQUENCIES = [50, 100, 60, 120];
+const HUM_FILTER_FREQUENCIES = [50, 100, 150, 200, 250, 60, 120, 180, 240, 300];
 function createHumChain(ctx, values) {
   const input = ctx.createGain();
   const dry = ctx.createGain();
