@@ -1333,6 +1333,33 @@
   .pro-eq-band input[type="range"]::-moz-range-thumb { width:14px; height:10px; border:1px solid var(--amber-2); border-radius:3px; background:#2b251c; }
   .pro-eq-scale { display:flex; justify-content:space-between; margin-top:4px; color:var(--soft); font:7px var(--mono); text-transform:uppercase; }
   @media (max-width: 600px) { .pro-eq-header { align-items:flex-start; flex-direction:column; } .pro-eq-actions { justify-content:flex-start; } }
+
+  /* ── PUERTA DE RUIDO / REDUCCION DE RUIDO: LOOP, PISTAS Y MIX ── */
+  .track-gate-block { min-width: 0; margin-top: 8px; }
+  .pro-gate-panel { padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),#11100f; background-size: 18px 18px; overflow: hidden; }
+  .pro-gate-header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; flex-wrap: wrap; }
+  .pro-gate-heading { display:flex; align-items:center; gap:7px; min-width:0; }
+  .pro-gate-title { color:var(--amber-2); font:700 9px var(--mono); letter-spacing:.12em; text-transform:uppercase; }
+  .pro-gate-subtitle { color:var(--soft); font:7px var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+  .pro-gate-led { width:8px; height:8px; border-radius:50%; background:var(--soft); box-shadow:0 0 0 3px rgba(255,255,255,.03); flex:0 0 auto; transition: background .08s ease, box-shadow .08s ease; }
+  .pro-gate-led.open { background: var(--green); box-shadow: 0 0 12px rgba(143,210,156,.55); }
+  .pro-gate-actions { display:flex; align-items:center; justify-content:flex-end; gap:5px; flex-wrap:wrap; }
+  .pro-gate-btn { min-height:24px; padding:0 7px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); color:var(--muted); font:700 7px var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+  .pro-gate-btn:hover { border-color:rgba(240,179,90,.4); color:var(--amber-2); }
+  .pro-gate-btn.active { border-color:rgba(143,210,156,.55); background:rgba(143,210,156,.1); color:#bfe9c6; }
+  .pro-gate-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px 14px; }
+  .pro-gate-control { display:grid; gap:4px; }
+  .pro-gate-control-top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .pro-gate-label { color:var(--soft); font:7px var(--mono); letter-spacing:.08em; text-transform:uppercase; }
+  .pro-gate-value { color:var(--amber-2); font:7px var(--mono); font-variant-numeric:tabular-nums; }
+  .pro-gate-control input[type="range"] { width:100%; height:6px; }
+  .pro-gate-control input[type="range"]::-webkit-slider-runnable-track { height:3px; border-radius:999px; background:linear-gradient(90deg,var(--amber) var(--fill,50%),var(--panel-3) var(--fill,50%)); }
+  .pro-gate-control input[type="range"]::-webkit-slider-thumb { appearance:none; width:12px; height:12px; margin-top:-4.5px; border-radius:50%; border:1px solid var(--amber-2); background:#2b251c; box-shadow:0 0 8px rgba(240,179,90,.3); }
+  .pro-gate-control input[type="range"]::-moz-range-track { height:3px; border-radius:999px; background:var(--panel-3); }
+  .pro-gate-control input[type="range"]::-moz-range-progress { height:3px; background:var(--amber); }
+  .pro-gate-control input[type="range"]::-moz-range-thumb { width:12px; height:12px; border-radius:50%; border:1px solid var(--amber-2); background:#2b251c; }
+  .pro-gate-panel.disabled .pro-gate-grid { opacity:.4; pointer-events:none; }
+  @media (max-width: 600px) { .pro-gate-header { align-items:flex-start; flex-direction:column; } .pro-gate-actions { justify-content:flex-start; } }
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinning { animation: spin .8s linear infinite; }
 
@@ -1840,6 +1867,10 @@
             <div class="track-eq-block pro-eq-host">
               <div class="pro-eq-panel" data-eq-target="track1" data-eq-title="Pista 1"></div>
             </div>
+            <!-- Puerta de ruido / reduccion de ruido — Pista 1 -->
+            <div class="track-gate-block">
+              <div class="pro-gate-panel" data-gate-target="track1" data-gate-title="Pista 1"></div>
+            </div>
           </div>
 
 
@@ -1898,6 +1929,10 @@
             <!-- Ecualizador profesional — Mix de pistas -->
             <div class="track-eq-block pro-eq-host">
               <div class="pro-eq-panel" data-eq-target="mix" data-eq-title="Mix de pistas"></div>
+            </div>
+            <!-- Puerta de ruido / reduccion de ruido — Mix de pistas -->
+            <div class="track-gate-block">
+              <div class="pro-gate-panel" data-gate-target="mix" data-gate-title="Mix de pistas"></div>
             </div>
           </div>
 
@@ -1979,6 +2014,10 @@
             <!-- Ecualizador profesional — Pista 2 -->
             <div class="track-eq-block pro-eq-host">
               <div class="pro-eq-panel" data-eq-target="track2" data-eq-title="Pista 2"></div>
+            </div>
+            <!-- Puerta de ruido / reduccion de ruido — Pista 2 -->
+            <div class="track-gate-block">
+              <div class="pro-gate-panel" data-gate-target="track2" data-gate-title="Pista 2"></div>
             </div>
           </div>
         </div>
@@ -2065,6 +2104,11 @@
       <!-- Ecualizador profesional — Loop -->
       <section class="module pro-eq-host" aria-label="Ecualizador profesional del loop" style="padding-bottom:0;border-bottom:0;">
         <div class="pro-eq-panel" data-eq-target="loop" data-eq-title="Loop"></div>
+      </section>
+
+      <!-- Puerta de ruido / reduccion de ruido — Loop -->
+      <section class="module track-gate-block" aria-label="Puerta de ruido del loop" style="padding-bottom:0;border-bottom:0;margin-top:0;">
+        <div class="pro-gate-panel" data-gate-target="loop" data-gate-title="Loop"></div>
       </section>
 
 
@@ -2201,6 +2245,10 @@
 // La mezcla es el resultado de las dos tomas, por eso se presenta al final.
 document.getElementById("tracks-stack")?.appendChild(document.getElementById("mix-track-card"));
 /* ─── ESTADO ─── */
+function defaultGateValues() {
+  // threshold/range en dB, attack/release/hold en milisegundos.
+  return { threshold: -45, range: -60, attack: 3, release: 150, hold: 60, bypassed: true };
+}
 const state = {
   audioCtx: null,
   mediaStream: null,
@@ -2235,6 +2283,8 @@ const state = {
   usingWorklet: false,
   workletReady: false,
   workletAttempted: false,
+  gateWorkletReady: false,
+  gateWorkletAttempted: false,
   recWorkletNode: null,
   recSilentGain: null,
   recMediaDestination: null,
@@ -2244,6 +2294,9 @@ const state = {
   // Ecualizador profesional — loop
   loopEqValues: { preamp: 0, bands: [0,0,0,0,0,0,0,0,0,0], bypassed: false },
   loopEQNodes: null,
+  // Puerta de ruido / reduccion de ruido — loop
+  loopGateValues: defaultGateValues(),
+  loopGateNode: null,
   masterAnalyser: null,
   tracks: {
     track1: {
@@ -2254,7 +2307,10 @@ const state = {
       zoom: 1, seek: 0,
       // Ecualizador profesional — pista
       eqValues: { preamp: 0, bands: [0,0,0,0,0,0,0,0,0,0], bypassed: false },
-      eqNodes: null
+      eqNodes: null,
+      // Puerta de ruido / reduccion de ruido — pista
+      gateValues: defaultGateValues(),
+      gateNode: null
     },
     mix: {
       buffer: null, sourceNode: null, chunks: [],
@@ -2263,7 +2319,9 @@ const state = {
       waveformData: [], analyser: null, liveRAF: null,
       zoom: 1, seek: 0,
       eqValues: { preamp: 0, bands: [0,0,0,0,0,0,0,0,0,0], bypassed: false },
-      eqNodes: null
+      eqNodes: null,
+      gateValues: defaultGateValues(),
+      gateNode: null
     },
     track2: {
       buffer: null, sourceNode: null, chunks: [],
@@ -2273,7 +2331,10 @@ const state = {
       zoom: 1, seek: 0,
       // Ecualizador profesional — pista
       eqValues: { preamp: 0, bands: [0,0,0,0,0,0,0,0,0,0], bypassed: false },
-      eqNodes: null
+      eqNodes: null,
+      // Puerta de ruido / reduccion de ruido — pista
+      gateValues: defaultGateValues(),
+      gateNode: null
     }
   }
 };
@@ -2447,6 +2508,7 @@ async function initAudio() {
   }
   if (state.audioCtx.state === "suspended") await state.audioCtx.resume();
   await ensurePCMWorklet();
+  await ensureGateWorklet();
   ensureEQChains();
   return true;
 }
@@ -2490,20 +2552,196 @@ function ensureEQChains() {
   if (!state.audioCtx || !state.gainNode) return;
   if (!state.loopEQNodes) { state.loopEQNodes = createEQChain(state.audioCtx, state.loopEqValues); state.loopEQNodes.output.connect(state.gainNode); }
   trackIds.forEach(id => { const track=state.tracks[id]; if(!track.eqNodes){track.eqNodes=createEQChain(state.audioCtx,track.eqValues);track.eqNodes.output.connect(state.gainNode);} });
+  ensureGateChains();
 }
 
-function renderWithEQ(buffer, values) {
-  return new Promise((resolve,reject) => {
-    if (!buffer || !values || values.bypassed || (!values.preamp && !values.bands.some(Boolean))) { resolve(buffer); return; }
-    try {
-      const OfflineCtx=window.OfflineAudioContext||window.webkitOfflineAudioContext;
-      if(!OfflineCtx){resolve(buffer);return;}
-      const offlineCtx=new OfflineCtx(buffer.numberOfChannels,buffer.length,buffer.sampleRate);
-      const src=offlineCtx.createBufferSource();src.buffer=buffer;
-      const chain=createEQChain(offlineCtx,values);src.connect(chain.input);chain.output.connect(offlineCtx.destination);src.start(0);
-      offlineCtx.startRendering().then(resolve).catch(reject);
-    } catch(e){reject(e);}
+/* ─── PUERTA DE RUIDO / REDUCCION DE RUIDO (AudioWorklet) ───
+   Se ubica antes del ecualizador en la cadena de cada pista y del loop:
+   fuente → puerta de ruido → ecualizador → salida general. Detecta el
+   nivel de la senal (seguidor de envolvente con ataque/liberacion) y
+   atenua el audio que queda por debajo del umbral, reduciendo el ruido
+   de fondo entre frases sin cortar la senal de forma brusca. */
+const GATE_WORKLET_NAME = "ayun-noise-gate";
+const gateWorkletSource = `
+class AyunNoiseGate extends AudioWorkletProcessor {
+  static get parameterDescriptors() {
+    return [
+      { name: "thresholdDb", defaultValue: -45, minValue: -80, maxValue: 0, automationRate: "k-rate" },
+      { name: "rangeDb", defaultValue: -60, minValue: -80, maxValue: 0, automationRate: "k-rate" },
+      { name: "attackMs", defaultValue: 3, minValue: 0.1, maxValue: 200, automationRate: "k-rate" },
+      { name: "releaseMs", defaultValue: 150, minValue: 5, maxValue: 2000, automationRate: "k-rate" },
+      { name: "holdMs", defaultValue: 60, minValue: 0, maxValue: 1000, automationRate: "k-rate" },
+      { name: "bypass", defaultValue: 0, minValue: 0, maxValue: 1, automationRate: "k-rate" }
+    ];
+  }
+  constructor() {
+    super();
+    this._env = 0;
+    this._gain = 1;
+    this._holdCounter = 0;
+    this._reportCounter = 0;
+  }
+  process(inputs, outputs, parameters) {
+    const input = inputs[0];
+    const output = outputs[0];
+    if (!input || !input.length || !input[0] || !input[0].length) return true;
+
+    const bypass = parameters.bypass[0] >= 0.5;
+    const thresholdDb = parameters.thresholdDb[0];
+    const rangeDb = parameters.rangeDb[0];
+    const attackMs = Math.max(0.1, parameters.attackMs[0]);
+    const releaseMs = Math.max(1, parameters.releaseMs[0]);
+    const holdMs = Math.max(0, parameters.holdMs[0]);
+
+    const sr = sampleRate;
+    const attackCoeff = Math.exp(-1 / (sr * (attackMs / 1000)));
+    const releaseCoeff = Math.exp(-1 / (sr * (releaseMs / 1000)));
+    const holdSamples = (holdMs / 1000) * sr;
+
+    const thresholdLin = Math.pow(10, thresholdDb / 20);
+    const floorLin = Math.pow(10, rangeDb / 20);
+
+    const frames = input[0].length;
+    const numChannels = input.length;
+    const gains = new Float32Array(frames);
+    let anyOpen = false;
+
+    for (let i = 0; i < frames; i++) {
+      let level = 0;
+      for (let ch = 0; ch < numChannels; ch++) {
+        const v = Math.abs(input[ch][i] || 0);
+        if (v > level) level = v;
+      }
+      if (level > this._env) this._env = level + (this._env - level) * attackCoeff;
+      else this._env = level + (this._env - level) * releaseCoeff;
+
+      const above = this._env >= thresholdLin;
+      if (above) this._holdCounter = holdSamples;
+      else if (this._holdCounter > 0) this._holdCounter--;
+      const gateOpen = above || this._holdCounter > 0;
+      if (gateOpen) anyOpen = true;
+
+      const targetGain = bypass ? 1 : (gateOpen ? 1 : floorLin);
+      const coeff = targetGain > this._gain ? attackCoeff : releaseCoeff;
+      this._gain = targetGain + (this._gain - targetGain) * coeff;
+      gains[i] = this._gain;
+    }
+
+    for (let ch = 0; ch < numChannels; ch++) {
+      const inCh = input[ch], outCh = output[ch];
+      if (!inCh || !outCh) continue;
+      for (let i = 0; i < frames; i++) outCh[i] = inCh[i] * gains[i];
+    }
+
+    this._reportCounter++;
+    if (this._reportCounter >= 8) {
+      this._reportCounter = 0;
+      this.port.postMessage({ open: anyOpen, gain: this._gain });
+    }
+    return true;
+  }
+}
+registerProcessor("${GATE_WORKLET_NAME}", AyunNoiseGate);
+`;
+
+async function ensureGateWorklet() {
+  if (state.gateWorkletReady) return true;
+  if (state.gateWorkletAttempted) return state.gateWorkletReady;
+  state.gateWorkletAttempted = true;
+  if (!state.audioCtx || !state.audioCtx.audioWorklet) return false;
+  try {
+    const blob = new Blob([gateWorkletSource], { type: "application/javascript" });
+    const url = URL.createObjectURL(blob);
+    await state.audioCtx.audioWorklet.addModule(url);
+    URL.revokeObjectURL(url);
+    state.gateWorkletReady = true;
+  } catch (e) {
+    console.error("No se pudo iniciar la puerta de ruido (AudioWorklet). El audio se reproducira sin reduccion de ruido.", e);
+    state.gateWorkletReady = false;
+  }
+  return state.gateWorkletReady;
+}
+
+function createGateNode(ctx, values) {
+  const node = new AudioWorkletNode(ctx, GATE_WORKLET_NAME, { numberOfInputs: 1, numberOfOutputs: 1 });
+  node.onprocessorerror = e => console.error("Error en la puerta de ruido:", e);
+  applyGateState(values, node);
+  return node;
+}
+
+function applyGateState(values, node) {
+  if (!values || !node || !node.parameters) return;
+  const p = node.parameters;
+  p.get("thresholdDb").value = Number(values.threshold ?? -45);
+  p.get("rangeDb").value = Number(values.range ?? -60);
+  p.get("attackMs").value = Number(values.attack ?? 3);
+  p.get("releaseMs").value = Number(values.release ?? 150);
+  p.get("holdMs").value = Number(values.hold ?? 60);
+  p.get("bypass").value = values.bypassed ? 1 : 0;
+}
+
+function ensureGateChains() {
+  if (!state.audioCtx || !state.gateWorkletReady) return;
+  if (!state.loopGateNode && state.loopEQNodes) {
+    state.loopGateNode = createGateNode(state.audioCtx, state.loopGateValues);
+    state.loopGateNode.connect(state.loopEQNodes.input);
+    watchGateNode("loop", state.loopGateNode);
+  }
+  trackIds.forEach(id => {
+    const track = state.tracks[id];
+    if (!track.gateNode && track.eqNodes) {
+      track.gateNode = createGateNode(state.audioCtx, track.gateValues);
+      track.gateNode.connect(track.eqNodes.input);
+      watchGateNode(id, track.gateNode);
+    }
   });
+}
+
+/* Actualiza el LED de estado (abierta/cerrada) de cada panel de puerta
+   de ruido a partir de los mensajes que envia el AudioWorklet. */
+function watchGateNode(target, node) {
+  if (!node || !node.port) return;
+  node.port.onmessage = ev => {
+    const panel = document.querySelector(`[data-gate-target="${target}"]`);
+    const led = panel?.querySelector(".pro-gate-led");
+    if (led) led.classList.toggle("open", !!ev.data?.open);
+  };
+}
+
+async function renderWithEQ(buffer, values, gateValues) {
+  const eqNeutral = !values || values.bypassed || (!values.preamp && !values.bands.some(Boolean));
+  const gateNeutral = !gateValues || gateValues.bypassed;
+  if (!buffer || (eqNeutral && gateNeutral)) return buffer;
+  try {
+    const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!OfflineCtx) return buffer;
+    const offlineCtx = new OfflineCtx(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+    const src = offlineCtx.createBufferSource(); src.buffer = buffer;
+    let node = src;
+    if (!gateNeutral) {
+      try {
+        const blob = new Blob([gateWorkletSource], { type: "application/javascript" });
+        const url = URL.createObjectURL(blob);
+        await offlineCtx.audioWorklet.addModule(url);
+        URL.revokeObjectURL(url);
+        const gateNode = createGateNode(offlineCtx, gateValues);
+        node.connect(gateNode);
+        node = gateNode;
+      } catch (e) {
+        console.error("No se pudo aplicar la puerta de ruido en la exportacion; se exporta sin ella.", e);
+      }
+    }
+    if (!eqNeutral) {
+      const chain = createEQChain(offlineCtx, values);
+      node.connect(chain.input);
+      node = chain.output;
+    }
+    node.connect(offlineCtx.destination);
+    src.start(0);
+    return await offlineCtx.startRendering();
+  } catch (e) {
+    return buffer;
+  }
 }
 
 function formatEQDb(value){const n=Number(value);return(n>0?"+":"")+n.toFixed(1)+" dB";}
@@ -2522,6 +2760,44 @@ function renderProfessionalEQ(target,values,getNodes){
 
 renderProfessionalEQ("loop",state.loopEqValues,()=>state.loopEQNodes);
 trackIds.forEach(id=>renderProfessionalEQ(id,state.tracks[id].eqValues,()=>state.tracks[id].eqNodes));
+
+/* ─── UI: PUERTA DE RUIDO / REDUCCION DE RUIDO ─── */
+function formatGateDb(value){return Math.round(Number(value))+" dB";}
+function formatGateMs(value){const n=Number(value);return(n<10?n.toFixed(1):Math.round(n))+" ms";}
+const GATE_CONTROLS = [
+  { key:"threshold", label:"Umbral",        min:-80, max:0,   step:1,   format:formatGateDb, hint:v=>"Umbral de "+v },
+  { key:"range",     label:"Reduccion máx.", min:-80, max:0,   step:1,   format:formatGateDb, hint:v=>"Reduccion maxima de "+v },
+  { key:"attack",    label:"Ataque",         min:0.1, max:50,  step:0.1, format:formatGateMs, hint:v=>"Ataque de "+v },
+  { key:"release",   label:"Liberacion",     min:5,   max:1000,step:5,   format:formatGateMs, hint:v=>"Liberacion de "+v },
+  { key:"hold",      label:"Retencion",      min:0,   max:500, step:5,   format:formatGateMs, hint:v=>"Retencion de "+v }
+];
+function renderNoiseGate(target,values,getNodes){
+  const panel=document.querySelector(`[data-gate-target="${target}"]`);if(!panel)return;
+  const title=panel.dataset.gateTitle||target;
+  panel.classList.toggle("disabled",values.bypassed);
+  panel.innerHTML=`<div class="pro-gate-header"><div class="pro-gate-heading"><span class="pro-gate-led" aria-hidden="true"></span><div><div class="pro-gate-title">Puerta de ruido · ${title}</div><div class="pro-gate-subtitle">Reduccion de ruido de fondo</div></div></div><div class="pro-gate-actions"><button class="pro-gate-btn pro-gate-reset" type="button">Reset</button><button class="pro-gate-btn pro-gate-toggle${values.bypassed?"":" active"}" type="button" aria-pressed="${!values.bypassed}">${values.bypassed?"Activar":"Desactivar"}</button></div></div><div class="pro-gate-grid"></div>`;
+  const grid=panel.querySelector(".pro-gate-grid"),toggle=panel.querySelector(".pro-gate-toggle");
+  GATE_CONTROLS.forEach(control=>{
+    const wrap=document.createElement("div");wrap.className="pro-gate-control";
+    const currentValue=values[control.key];
+    wrap.innerHTML=`<div class="pro-gate-control-top"><span class="pro-gate-label">${control.label}</span><span class="pro-gate-value">${control.format(currentValue)}</span></div><input type="range" min="${control.min}" max="${control.max}" step="${control.step}" value="${currentValue}" aria-label="${control.hint(control.label)} de ${title}">`;
+    const slider=wrap.querySelector("input"),readout=wrap.querySelector(".pro-gate-value");
+    slider.addEventListener("input",()=>{const v=Number(slider.value);values[control.key]=v;readout.textContent=control.format(v);applyGateState(values,getNodes());});
+    grid.appendChild(wrap);
+  });
+  panel.querySelector(".pro-gate-reset").addEventListener("click",()=>{
+    const defaults=defaultGateValues();
+    ["threshold","range","attack","release","hold"].forEach(key=>{values[key]=defaults[key];});
+    renderNoiseGate(target,values,getNodes);applyGateState(values,getNodes());
+  });
+  toggle.addEventListener("click",()=>{
+    values.bypassed=!values.bypassed;
+    renderNoiseGate(target,values,getNodes);applyGateState(values,getNodes());
+  });
+}
+renderNoiseGate("loop",state.loopGateValues,()=>state.loopGateNode);
+trackIds.forEach(id=>renderNoiseGate(id,state.tracks[id].gateValues,()=>state.tracks[id].gateNode));
+
 /* ─── CAPTURA PCM (AudioWorklet) ───
    Sustituye a MediaRecorder para grabar: captura las muestras Float32
    crudas del canal elegido, sin recompresion con perdida (webm/opus). */
@@ -3464,7 +3740,7 @@ function startTrackPlayback(id, when) {
   const offset = Math.max(0, Math.min(track.seek || 0, track.buffer.duration));
   track.sourceNode = state.audioCtx.createBufferSource();
   track.sourceNode.buffer = track.buffer;
-  track.sourceNode.connect(track.eqNodes ? track.eqNodes.input : state.gainNode);
+  track.sourceNode.connect(track.gateNode || (track.eqNodes ? track.eqNodes.input : state.gainNode));
   // Guardamos la funcion del "ended" para poder desconectarla si se trata
   // de una pausa manual (ver stopTrackPlayback) y asi distinguirla de
   // cuando la pista llega sola hasta el final.
@@ -3560,7 +3836,7 @@ function startPlayback(when) {
   state.sourceNode = state.audioCtx.createBufferSource();
   state.sourceNode.buffer = state.loopBuffer;
   state.sourceNode.loop = true;
-  state.sourceNode.connect(state.loopEQNodes ? state.loopEQNodes.input : state.gainNode);
+  state.sourceNode.connect(state.loopGateNode || (state.loopEQNodes ? state.loopEQNodes.input : state.gainNode));
   const startAt = (typeof when === "number") ? when : 0;
   state.sourceNode.start(startAt, offset);
   state.loopStartTime = startAt > state.audioCtx.currentTime ? startAt : state.audioCtx.currentTime;
@@ -4517,7 +4793,7 @@ async function downloadMP3() {
   els.btnDownload.disabled = true;
 
   try {
-    const buffer = await renderWithEQ(state.loopBuffer, state.loopEqValues);
+    const buffer = await renderWithEQ(state.loopBuffer, state.loopEqValues, state.loopGateValues);
     const sampleRate = buffer.sampleRate;
     const numChannels = Math.min(buffer.numberOfChannels, 2);
     const leftChannel  = buffer.getChannelData(0);
@@ -4581,7 +4857,7 @@ async function downloadTrackMP3(id) {
   e.download.disabled = true;
 
   try {
-    const buffer = await renderWithEQ(track.buffer, track.eqValues);
+    const buffer = await renderWithEQ(track.buffer, track.eqValues, track.gateValues);
     const sampleRate = buffer.sampleRate;
     const numChannels = Math.min(buffer.numberOfChannels, 2);
     const leftChannel  = buffer.getChannelData(0);
@@ -4638,7 +4914,7 @@ async function downloadLoopWAV() {
   els.dlWavIcon.classList.add("spinning");
   els.btnDownloadWav.disabled = true;
   try {
-    const buffer = await renderWithEQ(state.loopBuffer, state.loopEqValues);
+    const buffer = await renderWithEQ(state.loopBuffer, state.loopEqValues, state.loopGateValues);
     const blob = audioBufferToWav(buffer, 24);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -4664,7 +4940,7 @@ async function downloadTrackWAV(id) {
   e.dlWavIcon.classList.add("spinning");
   e.downloadWav.disabled = true;
   try {
-    const buffer = await renderWithEQ(track.buffer, track.eqValues);
+    const buffer = await renderWithEQ(track.buffer, track.eqValues, track.gateValues);
     const blob = audioBufferToWav(buffer, 24);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -5136,8 +5412,8 @@ async function createMixFromTracks() {
   const t1 = state.tracks.track1, t2 = state.tracks.track2, mix = state.tracks.mix;
   if (!t1.buffer || !t2.buffer) { showMicError("Para mezclar necesitas tener audio en Pista 1 y Pista 2."); return; }
   try {
-    const b1 = await renderWithEQ(t1.buffer, t1.eqValues);
-    const b2 = await renderWithEQ(t2.buffer, t2.eqValues);
+    const b1 = await renderWithEQ(t1.buffer, t1.eqValues, t1.gateValues);
+    const b2 = await renderWithEQ(t2.buffer, t2.eqValues, t2.gateValues);
     const sampleRate = state.audioCtx.sampleRate;
     const length = Math.max(b1.length, b2.length);
     const out = state.audioCtx.createBuffer(1, length, sampleRate);
