@@ -2297,7 +2297,9 @@ function defaultHumValues() {
   // zumbido de red de 50 Hz (Chile/Europa) y de 60 Hz (EE.UU. y otros
   // paises), junto con su primer armonico (100 Hz y 120 Hz), sin necesidad
   // de elegir una sola frecuencia: cubre ambos casos simultaneamente.
-  return { enabled: true, q: 30 };
+  // Queda desactivado por defecto (opt-in) para no interferir con la
+  // grabacion/reproduccion normal; se activa con un clic en el panel.
+  return { enabled: false, q: 25 };
 }
 const state = {
   audioCtx: null,
@@ -2937,7 +2939,7 @@ function renderHumFilter(target,values,getNodes){
   const panel=document.querySelector(`[data-hum-target="${target}"]`);if(!panel)return;
   const title=panel.dataset.humTitle||target;
   panel.classList.toggle("disabled",!values.enabled);
-  panel.innerHTML=`<div class="pro-hum-header"><div class="pro-hum-heading"><div><div class="pro-hum-title">Filtro Notch anti-zumbido · ${title}</div><div class="pro-hum-subtitle">Elimina a la vez el zumbido de 50 Hz y 60 Hz (y sus armonicos), en silencios y con musica/voz</div></div></div><div class="pro-hum-actions"><button class="pro-hum-btn pro-hum-toggle${values.enabled?" active":""}" type="button" aria-pressed="${values.enabled}">${values.enabled?"Desactivar":"Activar"}</button></div></div><div class="pro-hum-grid"><div class="pro-hum-control"><div class="pro-hum-control-top"><span class="pro-hum-label">Precision (Q)</span><span class="pro-hum-value">${formatHumQ(values.q)}</span></div><input type="range" min="10" max="60" step="1" value="${values.q}" aria-label="Precision del filtro de ${title}"></div></div>`;
+  panel.innerHTML=`<div class="pro-hum-header"><div class="pro-hum-heading"><div><div class="pro-hum-title">Filtro Notch anti-zumbido · ${title}</div><div class="pro-hum-subtitle">Elimina a la vez el zumbido de 50 Hz y 60 Hz (y sus armonicos), en silencios y con musica/voz</div></div></div><div class="pro-hum-actions"><button class="pro-hum-btn pro-hum-toggle${values.enabled?" active":""}" type="button" aria-pressed="${values.enabled}">${values.enabled?"Desactivar":"Activar"}</button></div></div><div class="pro-hum-grid"><div class="pro-hum-control"><div class="pro-hum-control-top"><span class="pro-hum-label">Precision (Q)</span><span class="pro-hum-value">${formatHumQ(values.q)}</span></div><input type="range" min="8" max="40" step="1" value="${values.q}" aria-label="Precision del filtro de ${title}"></div></div>`;
   const toggle=panel.querySelector(".pro-hum-toggle"),slider=panel.querySelector('input[type="range"]'),readout=panel.querySelector(".pro-hum-value");
   toggle.addEventListener("click",()=>{
     values.enabled=!values.enabled;
