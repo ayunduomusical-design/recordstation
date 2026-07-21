@@ -2000,6 +2000,20 @@
                 <input type="text" class="track-name-input" id="track3-name" value="Pista 3 (edita el nombre)" maxlength="40" aria-label="Nombre de la pista">
                 <span class="track-status" id="track3-status">Vacia</span>
               </div>
+              <div class="track-mic-row">
+                <span class="track-mic-label">Microfono</span>
+                <select class="input-select" id="track3-mic-device" aria-label="Microfono de la Pista 3">
+                  <option value="">Entrada predeterminada</option>
+                </select>
+              </div>
+              <div class="track-mic-row">
+                <span class="track-mic-label">Canal</span>
+                <select class="input-select" id="track3-channel" aria-label="Canal de entrada de la Pista 3">
+                  <option value="1" selected>Canal 1 (izquierdo)</option>
+                  <option value="2">Canal 2 (derecho)</option>
+                  <option value="both">Ambos canales (mezclados)</option>
+                </select>
+              </div>
               <div class="track-actions">
                 <button class="btn btn-main" id="track3-load" type="button">
                   <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"></path></svg>
@@ -2069,7 +2083,7 @@
               <div class="track-actions mix-actions">
                 <button class="btn btn-main" id="mix-record" type="button">
                   <svg class="icon" id="mix-rec-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle></svg>
-                  <span id="mix-rec-label">Grabar pistas que contengan audios</span>
+                  <span id="mix-rec-label">Grabar pistas 1, 2 y 3</span>
                 </button>
                 <button class="btn btn-secondary" id="mix-mix" type="button" disabled>
                   <svg class="icon" id="mix-mix-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10v2H4zm0 8h16v2H4zm12-9h4v4h-4zm-6 8h4v4h-4z"></path></svg>
@@ -4999,7 +5013,7 @@ function setTrackStatus(id, mode) {
     e.status.textContent = "Vacia";
     e.play.disabled = true; e.clear.disabled = true; if (e.download) e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
   }
-  if (e.recLabel) e.recLabel.textContent = id === "mix" ? "Grabar pistas que contengan audios" : "Grabar";
+  if (e.recLabel) e.recLabel.textContent = id === "mix" ? "Grabar pistas 1, 2 y 3" : "Grabar";
   e.playLabel.textContent = id === "mix" ? "Reproducir mezcla" : "Play";
   if (typeof updateMixButton === "function") updateMixButton();
   if (typeof updatePlayTodoBtn === "function") updatePlayTodoBtn();
@@ -5604,68 +5618,72 @@ function floatChunksToTrackBuffer(id, chunks) {
   return true;
 }
 
+const DUAL_REC_TRACK_IDS = ["track1", "track2", "track3"];
+
 async function startDualTrackRecording() {
   if (state.countInActive || state.isRecording || isAnyTrackRecording()) return;
   if (!(await initAudio())) return;
   const workletOk = await ensurePCMWorklet();
   if (!workletOk) { showMicError("La grabacion simultanea necesita AudioWorklet. Usa Chrome/Edge actualizado para esta funcion."); return; }
 
-  const mic1 = tracksEls.track1.micSelect ? tracksEls.track1.micSelect.value : "";
-  const mic2 = tracksEls.track2.micSelect ? tracksEls.track2.micSelect.value : "";
-  let stream1, stream2;
+  const micValues = DUAL_REC_TRACK_IDS.map(id => tracksEls[id].micSelect ? tracksEls[id].micSelect.value : "");
+  const streamCache = new Map(); // mismo dispositivo -> mismo stream, sin pedirlo dos veces
+  const streams = [];
   try {
-    stream1 = await getMic(mic1);
-    stream2 = mic1 === mic2 ? stream1 : await getMic(mic2);
-  }
-  catch (err) {
-    stream1?.getTracks().forEach(t => t.stop());
-    showMicError("No se pudo acceder a una de las dos entradas para grabar ambas pistas.");
+    for (const mic of micValues) {
+      if (streamCache.has(mic)) { streams.push(streamCache.get(mic)); continue; }
+      const s = await getMic(mic);
+      streamCache.set(mic, s);
+      streams.push(s);
+    }
+  } catch (err) {
+    streams.forEach(s => s.getTracks().forEach(t => t.stop()));
+    showMicError("No se pudo acceder a una de las entradas para grabar las pistas 1, 2 y 3.");
     return;
   }
 
   hideMicError();
-  stopTrackPlayback("track1"); stopTrackPlayback("track2"); stopTrackPlayback("mix");
+  DUAL_REC_TRACK_IDS.forEach(id => stopTrackPlayback(id));
+  stopTrackPlayback("mix");
   stopMetronome(false);
 
-  const routing1 = prepareInputRouting(stream1, tracksEls.track1.channelSelect);
-  const routing2 = prepareInputRouting(stream2, tracksEls.track2.channelSelect);
+  const routings = DUAL_REC_TRACK_IDS.map((id, i) => prepareInputRouting(streams[i], tracksEls[id].channelSelect));
 
   // Filtro anti-zumbido en vivo, independiente para cada entrada (cada
   // pista puede tener su propio Q/estado), insertado antes del analizador
   // y de los capturadores PCM de cada una.
-  const humNode1 = createHumChain(state.audioCtx, state.tracks.track1.humValues);
-  const humNode2 = createHumChain(state.audioCtx, state.tracks.track2.humValues);
-  routing1.connectTo(humNode1.input);
-  routing2.connectTo(humNode2.input);
+  const humNodes = DUAL_REC_TRACK_IDS.map((id, i) => {
+    const hn = createHumChain(state.audioCtx, state.tracks[id].humValues);
+    routings[i].connectTo(hn.input);
+    return hn;
+  });
 
   const analyser = state.audioCtx.createAnalyser(); analyser.fftSize = 512;
-  humNode1.output.connect(analyser);
+  humNodes[0].output.connect(analyser);
   state.tracks.mix.analyser = analyser;
 
-  const node1 = new AudioWorkletNode(state.audioCtx, PCM_WORKLET_NAME);
-  const node2 = new AudioWorkletNode(state.audioCtx, PCM_WORKLET_NAME);
+  const nodes = DUAL_REC_TRACK_IDS.map(() => new AudioWorkletNode(state.audioCtx, PCM_WORKLET_NAME));
   const silentGain = state.audioCtx.createGain(); silentGain.gain.value = 0;
-  node1.connect(silentGain); node2.connect(silentGain); silentGain.connect(state.audioCtx.destination);
+  nodes.forEach(n => n.connect(silentGain));
+  silentGain.connect(state.audioCtx.destination);
 
-  const chunks1 = [], chunks2 = [];
-  node1.port.onmessage = ev => { if (ev.data instanceof Float32Array) chunks1.push(ev.data); };
-  node2.port.onmessage = ev => { if (ev.data instanceof Float32Array) chunks2.push(ev.data); };
+  const chunksById = {};
+  DUAL_REC_TRACK_IDS.forEach((id, i) => {
+    const chunks = [];
+    chunksById[id] = chunks;
+    nodes[i].port.onmessage = ev => { if (ev.data instanceof Float32Array) chunks.push(ev.data); };
+  });
 
-  state.multiTrackRecording = { streams: [...new Set([stream1, stream2])], routing1, routing2, humNode1, humNode2, node1, node2, silentGain, chunks1, chunks2 };
+  state.multiTrackRecording = { streams: [...new Set(streams)], routings, humNodes, nodes, silentGain, chunksById };
   state.activeTarget = "mix";
-  setTrackStatus("track1", "countin");
-  setTrackStatus("track2", "countin");
+  DUAL_REC_TRACK_IDS.forEach(id => setTrackStatus(id, "countin"));
   setTrackStatus("mix", "countin");
 
   startCountIn(() => {
     if (!state.multiTrackRecording) return;
-    humNode1.output.connect(node1);
-    humNode2.output.connect(node2);
-    state.tracks.track1.isRecording = true;
-    state.tracks.track2.isRecording = true;
+    humNodes.forEach((hn, i) => hn.output.connect(nodes[i]));
+    DUAL_REC_TRACK_IDS.forEach(id => { state.tracks[id].isRecording = true; setTrackStatus(id, "recording"); });
     state.tracks.mix.isRecording = true;
-    setTrackStatus("track1", "recording");
-    setTrackStatus("track2", "recording");
     setTrackStatus("mix", "recording");
     startTrackLiveWaveform("mix");
     if (state.metroOn) startMetronome();
@@ -5678,23 +5696,19 @@ async function stopDualTrackRecording() {
   }
   const rec = state.multiTrackRecording;
   if (!rec) return;
-  state.tracks.track1.isRecording = false;
-  state.tracks.track2.isRecording = false;
+  DUAL_REC_TRACK_IDS.forEach(id => { state.tracks[id].isRecording = false; });
   state.tracks.mix.isRecording = false;
   cancelAnimationFrame(state.tracks.mix.liveRAF);
-  try { rec.humNode1.output.disconnect(rec.node1); } catch (e) {}
-  try { rec.humNode2.output.disconnect(rec.node2); } catch (e) {}
-  await Promise.all([waitForWorkletFlush(rec.node1), waitForWorkletFlush(rec.node2)]);
-  try { rec.node1.disconnect(); rec.node2.disconnect(); rec.silentGain.disconnect(); } catch (e) {}
-  disconnectHumChain(rec.humNode1);
-  disconnectHumChain(rec.humNode2);
-  try { rec.routing1.inputSource.disconnect(); rec.routing2.inputSource.disconnect(); } catch (e) {}
+  rec.humNodes.forEach((hn, i) => { try { hn.output.disconnect(rec.nodes[i]); } catch (e) {} });
+  await Promise.all(rec.nodes.map(n => waitForWorkletFlush(n)));
+  try { rec.nodes.forEach(n => n.disconnect()); rec.silentGain.disconnect(); } catch (e) {}
+  rec.humNodes.forEach(hn => disconnectHumChain(hn));
+  rec.routings.forEach(r => { try { r.inputSource.disconnect(); } catch (e) {} });
   rec.streams.forEach(stream => stream.getTracks().forEach(t => t.stop()));
   state.multiTrackRecording = null;
   state.activeTarget = null;
   state.tracks.mix.analyser = null;
-  floatChunksToTrackBuffer("track1", rec.chunks1);
-  floatChunksToTrackBuffer("track2", rec.chunks2);
+  DUAL_REC_TRACK_IDS.forEach(id => floatChunksToTrackBuffer(id, rec.chunksById[id]));
   setTrackStatus("mix", state.tracks.mix.buffer ? "ready" : "empty");
   updateMixButton();
 }
@@ -6288,7 +6302,8 @@ function updateSessionPanel() {
   const loopChannel = els.inputChannel?.value || "1";
   const track1Channel = tracksEls.track1?.channelSelect?.value || "1";
   const track2Channel = tracksEls.track2?.channelSelect?.value || "2";
-  sessionUI.channels.textContent = "Loop " + loopChannel + " · Pista 1: " + track1Channel + " · Pista 2: " + track2Channel;
+  const track3Channel = tracksEls.track3?.channelSelect?.value || "1";
+  sessionUI.channels.textContent = "Loop " + loopChannel + " · Pista 1: " + track1Channel + " · Pista 2: " + track2Channel + " · Pista 3: " + track3Channel;
 }
 
 async function updateStorageStatus() {
@@ -6313,6 +6328,7 @@ async function saveSessionProject() {
   localStorage.setItem("ayun-session-settings", JSON.stringify({
     inputDevice: els.inputDevice?.value || "", inputChannel: els.inputChannel?.value || "1",
     track1Channel: tracksEls.track1?.channelSelect?.value || "1", track2Channel: tracksEls.track2?.channelSelect?.value || "2",
+    track3Channel: tracksEls.track3?.channelSelect?.value || "1",
     savedAt: new Date().toISOString()
   }));
   updateStorageStatus();
@@ -6327,6 +6343,7 @@ async function recoverSessionProject() {
       if (els.inputChannel) els.inputChannel.value = saved.inputChannel || "1";
       if (tracksEls.track1?.channelSelect) tracksEls.track1.channelSelect.value = saved.track1Channel || "1";
       if (tracksEls.track2?.channelSelect) tracksEls.track2.channelSelect.value = saved.track2Channel || "2";
+      if (tracksEls.track3?.channelSelect) tracksEls.track3.channelSelect.value = saved.track3Channel || "1";
     } catch {}
   }
   await Promise.all(trackIds.map(id => loadTrack(id)));
@@ -6395,6 +6412,7 @@ async function gatherProjectSnapshot() {
       inputChannel: els.inputChannel?.value || "1",
       track1Channel: tracksEls.track1?.channelSelect?.value || "1",
       track2Channel: tracksEls.track2?.channelSelect?.value || "2",
+      track3Channel: tracksEls.track3?.channelSelect?.value || "1",
       latencyCompensationMs: state.latencyCompensationMs
     }
   };
@@ -6411,6 +6429,7 @@ async function applyProjectSnapshot(data) {
   if (els.inputChannel && settings.inputChannel) els.inputChannel.value = settings.inputChannel;
   if (tracksEls.track1?.channelSelect && settings.track1Channel) tracksEls.track1.channelSelect.value = settings.track1Channel;
   if (tracksEls.track2?.channelSelect && settings.track2Channel) tracksEls.track2.channelSelect.value = settings.track2Channel;
+  if (tracksEls.track3?.channelSelect && settings.track3Channel) tracksEls.track3.channelSelect.value = settings.track3Channel;
   if (typeof settings.latencyCompensationMs === "number" && typeof setLatencyCompensation === "function") {
     setLatencyCompensation(settings.latencyCompensationMs);
   }
@@ -6623,7 +6642,7 @@ els.projectsModalList?.addEventListener("click", async e => {
   } catch { updateFolderStatus(null); }
 })();
 
-[els.inputDevice, els.inputChannel, tracksEls.track1?.channelSelect, tracksEls.track2?.channelSelect].filter(Boolean).forEach(el => el.addEventListener("change", updateSessionPanel));
+[els.inputDevice, els.inputChannel, tracksEls.track1?.channelSelect, tracksEls.track2?.channelSelect, tracksEls.track3?.channelSelect].filter(Boolean).forEach(el => el.addEventListener("change", updateSessionPanel));
 if (els.vuDb) new MutationObserver(updateDynamicTip).observe(els.vuDb, { childList: true, characterData: true, subtree: true });
 updateSessionPanel(); updateStorageStatus(); updateDynamicTip();
 /* ─── NOTAS Y CHECKLIST DE SESIÓN ─── */
