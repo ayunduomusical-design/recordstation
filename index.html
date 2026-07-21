@@ -2000,20 +2000,6 @@
                 <input type="text" class="track-name-input" id="track3-name" value="Pista 3 (edita el nombre)" maxlength="40" aria-label="Nombre de la pista">
                 <span class="track-status" id="track3-status">Vacia</span>
               </div>
-              <div class="track-mic-row">
-                <span class="track-mic-label">Microfono</span>
-                <select class="input-select" id="track3-mic-device" aria-label="Microfono de la Pista 3">
-                  <option value="">Entrada predeterminada</option>
-                </select>
-              </div>
-              <div class="track-mic-row">
-                <span class="track-mic-label">Canal</span>
-                <select class="input-select" id="track3-channel" aria-label="Canal de entrada de la Pista 3">
-                  <option value="1" selected>Canal 1 (izquierdo)</option>
-                  <option value="2">Canal 2 (derecho)</option>
-                  <option value="both">Ambos canales (mezclados)</option>
-                </select>
-              </div>
               <div class="track-actions">
                 <button class="btn btn-main" id="track3-load" type="button">
                   <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"></path></svg>
@@ -2081,9 +2067,9 @@
                 <span class="track-status" id="mix-status">Vacia</span>
               </div>
               <div class="track-actions mix-actions">
-                <button class="btn btn-main" id="mix-record" type="button">
+                <button class="btn btn-main" id="mix-record" type="button" title="Reproduce la pista 3 mientras graba a la vez la pista 1 y la pista 2, todas empiezan juntas tras la cuenta de entrada">
                   <svg class="icon" id="mix-rec-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle></svg>
-                  <span id="mix-rec-label">Grabar pistas 1, 2 y 3</span>
+                  <span id="mix-rec-label">Reproducir pista 3, grabar pista 1 y pista 2</span>
                 </button>
                 <button class="btn btn-secondary" id="mix-mix" type="button" disabled>
                   <svg class="icon" id="mix-mix-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10v2H4zm0 8h16v2H4zm12-9h4v4h-4zm-6 8h4v4h-4z"></path></svg>
@@ -4864,7 +4850,7 @@ function ensureCountInOverlays() {
 }
 
 function countInArmedLanes() {
-  if (state.activeTarget === "mix") return new Set(["track1", "mix", "track2"]);
+  if (state.activeTarget === "mix") return new Set(["track1", "mix", "track2", "track3"]);
   return new Set([state.activeTarget || "main"]);
 }
 
@@ -4993,7 +4979,7 @@ function setTrackStatus(id, mode) {
     return;
   }
   if (mode === "recording") {
-    e.status.textContent = id === "mix" ? "Grabando ambas" : "Grabando";
+    e.status.textContent = id === "mix" ? "Reproduciendo 3, grabando 1 y 2" : "Grabando";
     if (e.recLabel) e.recLabel.textContent = "Detener";
     e.play.disabled = true; e.clear.disabled = true; if (e.download) e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
     if (typeof updateComboButtons === "function") updateComboButtons();
@@ -5013,7 +4999,7 @@ function setTrackStatus(id, mode) {
     e.status.textContent = "Vacia";
     e.play.disabled = true; e.clear.disabled = true; if (e.download) e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
   }
-  if (e.recLabel) e.recLabel.textContent = id === "mix" ? "Grabar pistas 1, 2 y 3" : "Grabar";
+  if (e.recLabel) e.recLabel.textContent = id === "mix" ? "Reproducir pista 3, grabar pista 1 y pista 2" : "Grabar";
   e.playLabel.textContent = id === "mix" ? "Reproducir mezcla" : "Play";
   if (typeof updateMixButton === "function") updateMixButton();
   if (typeof updatePlayTodoBtn === "function") updatePlayTodoBtn();
@@ -5596,6 +5582,20 @@ function updateComboButtons() {
     btn2.disabled = !state.tracks.track2.buffer || (busyElsewhere && !runningHere);
     btn2.classList.toggle("active", runningHere);
   }
+  updateMixRecordButton();
+}
+
+/* Boton "Reproducir pista 3, grabar pista 1 y pista 2": necesita que la
+   pista 3 tenga audio cargado (es lo que se va a reproducir), y que no haya
+   otra grabacion en curso en ningun otro lado (salvo que sea esta misma, en
+   cuyo caso queda habilitado para poder detenerla). */
+function updateMixRecordButton() {
+  const btn = tracksEls.mix.record;
+  if (!btn) return;
+  const runningHere = !!state.multiTrackRecording || (state.countInActive && state.activeTarget === "mix");
+  if (runningHere) { btn.disabled = false; return; }
+  const busyElsewhere = state.countInActive || state.isRecording || isAnyTrackRecording();
+  btn.disabled = !state.tracks.track3.buffer || busyElsewhere;
 }
 
 function floatChunksToTrackBuffer(id, chunks) {
@@ -5618,10 +5618,15 @@ function floatChunksToTrackBuffer(id, chunks) {
   return true;
 }
 
-const DUAL_REC_TRACK_IDS = ["track1", "track2", "track3"];
+const DUAL_REC_TRACK_IDS = ["track1", "track2"];
 
 async function startDualTrackRecording() {
   if (state.countInActive || state.isRecording || isAnyTrackRecording()) return;
+  const track3 = state.tracks.track3;
+  if (!track3.buffer) {
+    showMicError("Para usar este boton primero carga un audio en la pista 3: es la que se reproducira mientras grabas las pistas 1 y 2.");
+    return;
+  }
   if (!(await initAudio())) return;
   const workletOk = await ensurePCMWorklet();
   if (!workletOk) { showMicError("La grabacion simultanea necesita AudioWorklet. Usa Chrome/Edge actualizado para esta funcion."); return; }
@@ -5638,14 +5643,20 @@ async function startDualTrackRecording() {
     }
   } catch (err) {
     streams.forEach(s => s.getTracks().forEach(t => t.stop()));
-    showMicError("No se pudo acceder a una de las entradas para grabar las pistas 1, 2 y 3.");
+    showMicError("No se pudo acceder a una de las entradas para grabar las pistas 1 y 2.");
     return;
   }
 
   hideMicError();
   DUAL_REC_TRACK_IDS.forEach(id => stopTrackPlayback(id));
+  stopTrackPlayback("track3");
   stopTrackPlayback("mix");
   stopMetronome(false);
+
+  // La pista 3 siempre se escucha completa, desde el principio, igual que
+  // en el boton combinado "Reproducir X y grabar Y".
+  track3.seek = 0;
+  updateSeekUI("track3");
 
   const routings = DUAL_REC_TRACK_IDS.map((id, i) => prepareInputRouting(streams[i], tracksEls[id].channelSelect));
 
@@ -5678,14 +5689,21 @@ async function startDualTrackRecording() {
   state.activeTarget = "mix";
   DUAL_REC_TRACK_IDS.forEach(id => setTrackStatus(id, "countin"));
   setTrackStatus("mix", "countin");
+  setTrackStatus("track3", "countin");
 
   startCountIn(() => {
     if (!state.multiTrackRecording) return;
+    // Instante preciso (reloj del audioContext) en el que arrancan a la vez
+    // la grabacion de las pistas 1 y 2 y la reproduccion de la pista 3,
+    // capturado antes de cualquier otro codigo que pudiera introducir un
+    // pequeño retraso entre ellas.
+    const syncTime = state.audioCtx.currentTime;
     humNodes.forEach((hn, i) => hn.output.connect(nodes[i]));
     DUAL_REC_TRACK_IDS.forEach(id => { state.tracks[id].isRecording = true; setTrackStatus(id, "recording"); });
     state.tracks.mix.isRecording = true;
     setTrackStatus("mix", "recording");
     startTrackLiveWaveform("mix");
+    startTrackPlayback("track3", syncTime);
     if (state.metroOn) startMetronome();
   });
 }
@@ -5693,6 +5711,8 @@ async function startDualTrackRecording() {
 async function stopDualTrackRecording() {
   if (state.countInActive && state.activeTarget === "mix") {
     cancelCountIn();
+    DUAL_REC_TRACK_IDS.forEach(id => setTrackStatus(id, state.tracks[id].buffer ? "ready" : "empty"));
+    setTrackStatus("track3", state.tracks.track3.buffer ? "ready" : "empty");
   }
   const rec = state.multiTrackRecording;
   if (!rec) return;
@@ -5708,9 +5728,11 @@ async function stopDualTrackRecording() {
   state.multiTrackRecording = null;
   state.activeTarget = null;
   state.tracks.mix.analyser = null;
+  stopTrackPlayback("track3");
   DUAL_REC_TRACK_IDS.forEach(id => floatChunksToTrackBuffer(id, rec.chunksById[id]));
   setTrackStatus("mix", state.tracks.mix.buffer ? "ready" : "empty");
   updateMixButton();
+  updateMixRecordButton();
 }
 
 function tracksWithAudio() {
@@ -6302,8 +6324,7 @@ function updateSessionPanel() {
   const loopChannel = els.inputChannel?.value || "1";
   const track1Channel = tracksEls.track1?.channelSelect?.value || "1";
   const track2Channel = tracksEls.track2?.channelSelect?.value || "2";
-  const track3Channel = tracksEls.track3?.channelSelect?.value || "1";
-  sessionUI.channels.textContent = "Loop " + loopChannel + " · Pista 1: " + track1Channel + " · Pista 2: " + track2Channel + " · Pista 3: " + track3Channel;
+  sessionUI.channels.textContent = "Loop " + loopChannel + " · Pista 1: " + track1Channel + " · Pista 2: " + track2Channel;
 }
 
 async function updateStorageStatus() {
@@ -6328,7 +6349,6 @@ async function saveSessionProject() {
   localStorage.setItem("ayun-session-settings", JSON.stringify({
     inputDevice: els.inputDevice?.value || "", inputChannel: els.inputChannel?.value || "1",
     track1Channel: tracksEls.track1?.channelSelect?.value || "1", track2Channel: tracksEls.track2?.channelSelect?.value || "2",
-    track3Channel: tracksEls.track3?.channelSelect?.value || "1",
     savedAt: new Date().toISOString()
   }));
   updateStorageStatus();
@@ -6343,7 +6363,6 @@ async function recoverSessionProject() {
       if (els.inputChannel) els.inputChannel.value = saved.inputChannel || "1";
       if (tracksEls.track1?.channelSelect) tracksEls.track1.channelSelect.value = saved.track1Channel || "1";
       if (tracksEls.track2?.channelSelect) tracksEls.track2.channelSelect.value = saved.track2Channel || "2";
-      if (tracksEls.track3?.channelSelect) tracksEls.track3.channelSelect.value = saved.track3Channel || "1";
     } catch {}
   }
   await Promise.all(trackIds.map(id => loadTrack(id)));
@@ -6412,7 +6431,6 @@ async function gatherProjectSnapshot() {
       inputChannel: els.inputChannel?.value || "1",
       track1Channel: tracksEls.track1?.channelSelect?.value || "1",
       track2Channel: tracksEls.track2?.channelSelect?.value || "2",
-      track3Channel: tracksEls.track3?.channelSelect?.value || "1",
       latencyCompensationMs: state.latencyCompensationMs
     }
   };
@@ -6429,7 +6447,6 @@ async function applyProjectSnapshot(data) {
   if (els.inputChannel && settings.inputChannel) els.inputChannel.value = settings.inputChannel;
   if (tracksEls.track1?.channelSelect && settings.track1Channel) tracksEls.track1.channelSelect.value = settings.track1Channel;
   if (tracksEls.track2?.channelSelect && settings.track2Channel) tracksEls.track2.channelSelect.value = settings.track2Channel;
-  if (tracksEls.track3?.channelSelect && settings.track3Channel) tracksEls.track3.channelSelect.value = settings.track3Channel;
   if (typeof settings.latencyCompensationMs === "number" && typeof setLatencyCompensation === "function") {
     setLatencyCompensation(settings.latencyCompensationMs);
   }
@@ -6642,7 +6659,7 @@ els.projectsModalList?.addEventListener("click", async e => {
   } catch { updateFolderStatus(null); }
 })();
 
-[els.inputDevice, els.inputChannel, tracksEls.track1?.channelSelect, tracksEls.track2?.channelSelect, tracksEls.track3?.channelSelect].filter(Boolean).forEach(el => el.addEventListener("change", updateSessionPanel));
+[els.inputDevice, els.inputChannel, tracksEls.track1?.channelSelect, tracksEls.track2?.channelSelect].filter(Boolean).forEach(el => el.addEventListener("change", updateSessionPanel));
 if (els.vuDb) new MutationObserver(updateDynamicTip).observe(els.vuDb, { childList: true, characterData: true, subtree: true });
 updateSessionPanel(); updateStorageStatus(); updateDynamicTip();
 /* ─── NOTAS Y CHECKLIST DE SESIÓN ─── */
