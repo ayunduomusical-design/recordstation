@@ -1709,7 +1709,7 @@
     </div>
     <div class="topbar-right">
       <div class="voice-control">
-        <button class="voice-toggle" id="voice-toggle" type="button" aria-pressed="false" title="Comandos: Detener, Grabar loop / pista 1 / pista 2 / ambas pistas, Reproducir loop / pista 1 / pista 2 / mezcla, Mezclar pistas, Descargar MP3 / WAV de loop, pista 1, pista 2 o mezcla">
+        <button class="voice-toggle" id="voice-toggle" type="button" aria-pressed="false" title="Comandos: Detener, Grabar loop / pista 1 / pista 2 / ambas pistas, Reproducir loop / pista 1 / pista 2 / pista 3 / mezcla, Mezclar pistas, Descargar MP3 / WAV de loop, pista 1, pista 2 o mezcla">
           <span class="voice-dot" aria-hidden="true"></span>
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"></path></svg>
           <span id="voice-label">Comandos de voz</span>
@@ -1904,72 +1904,6 @@
           </div>
 
 
-          <!-- Mix de pistas -->
-          <div class="track-card" id="mix-track-card">
-            <div class="track-card-inner">
-              <div class="track-head">
-                <input type="text" class="track-name-input" id="mix-name" value="Mix de pistas (edita el nombre)" maxlength="40" aria-label="Nombre del mix de pistas">
-                <span class="track-status" id="mix-status">Vacia</span>
-              </div>
-              <div class="track-actions mix-actions">
-                <button class="btn btn-main" id="mix-record" type="button">
-                  <svg class="icon" id="mix-rec-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle></svg>
-                  <span id="mix-rec-label">Grabar ambas pistas</span>
-                </button>
-                <button class="btn btn-secondary" id="mix-mix" type="button" disabled>
-                  <svg class="icon" id="mix-mix-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10v2H4zm0 8h16v2H4zm12-9h4v4h-4zm-6 8h4v4h-4z"></path></svg>
-                  <span>Mezclar pistas</span>
-                </button>
-                <button class="btn btn-secondary" id="mix-play" type="button" disabled>
-                  <svg class="icon" id="mix-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
-                  <span id="mix-play-label">Reproducir mezcla</span>
-                </button>
-                <button class="btn icon-btn btn-download" id="mix-download" type="button" disabled aria-label="Descargar mezcla como MP3" title="Descargar MP3">
-                  <svg class="icon" id="mix-dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
-                </button>
-                <button class="btn icon-btn btn-download" id="mix-download-wav" type="button" disabled aria-label="Descargar mezcla como WAV" title="Descargar WAV (alta calidad)">
-                  <svg class="icon" id="mix-dl-wav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
-                </button>
-                <button class="btn icon-btn" id="mix-clear" type="button" disabled aria-label="Borrar mezcla" title="Borrar pista">
-                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
-                </button>
-              </div>
-            </div>
-            <div class="track-wave-wrap" id="mix-viewport">
-              <div class="track-wave-zoomframe" id="mix-zoomframe">
-                <canvas id="mix-canvas"></canvas>
-                <div class="trim-shade" id="mix-shade-start" style="left:0;width:0"></div>
-                <div class="trim-shade" id="mix-shade-end"   style="right:0;width:0"></div>
-                <div class="trim-handle start hidden" id="mix-handle-start"><div class="trim-badge" id="mix-badge-start"></div></div>
-                <div class="trim-handle end hidden" id="mix-handle-end"><div class="trim-badge" id="mix-badge-end"></div></div>
-                <div class="seek-strip" id="mix-seek-strip"></div>
-                <div class="seek-cursor" id="mix-seek-cursor" style="left:0"></div>
-                <div class="seek-badge" id="mix-seek-badge">0.000s</div>
-              </div>
-              <div class="track-wave-empty" id="mix-wave-empty">Sin mezcla</div>
-              <div class="dropzone-overlay" id="mix-dropzone">Soltar archivo de audio aqui</div>
-            </div>
-            <div class="zoom-row track-zoom-row">
-              <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
-              <input type="range" id="mix-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda de la mezcla">
-              <span class="readout" id="mix-zoom-readout">1.0x</span>
-              <button class="trim-undo-btn" id="mix-trim-undo" type="button" disabled title="Deshacer corte" aria-label="Deshacer corte"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"></path></svg></button>
-              <button class="trim-undo-btn" id="mix-trim-redo" type="button" disabled title="Rehacer corte" aria-label="Rehacer corte"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg></button>
-            </div>
-            <!-- Ecualizador profesional — Mix de pistas -->
-            <div class="track-eq-block pro-eq-host">
-              <div class="pro-eq-panel" data-eq-target="mix" data-eq-title="Mix de pistas"></div>
-            </div>
-            <!-- Puerta de ruido / reduccion de ruido — Mix de pistas -->
-            <div class="track-gate-block">
-              <div class="pro-gate-panel" data-gate-target="mix" data-gate-title="Mix de pistas"></div>
-            </div>
-            <!-- Filtro Notch quirurgico anti-zumbido electrico — Mix de pistas -->
-            <div class="track-hum-block">
-              <div class="pro-hum-panel" data-hum-target="mix" data-hum-title="Mix de pistas"></div>
-            </div>
-          </div>
-
           <!-- Pista 2 -->
           <div class="track-card">
             <div class="track-card-inner">
@@ -2056,6 +1990,138 @@
             <!-- Filtro Notch quirurgico anti-zumbido electrico — Pista 2 -->
             <div class="track-hum-block">
               <div class="pro-hum-panel" data-hum-target="track2" data-hum-title="Pista 2"></div>
+            </div>
+          </div>
+
+          <!-- Pista 3 -->
+          <div class="track-card">
+            <div class="track-card-inner">
+              <div class="track-head">
+                <input type="text" class="track-name-input" id="track3-name" value="Pista 3 (edita el nombre)" maxlength="40" aria-label="Nombre de la pista">
+                <span class="track-status" id="track3-status">Vacia</span>
+              </div>
+              <div class="track-actions">
+                <button class="btn btn-main" id="track3-load" type="button">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"></path></svg>
+                  <span id="track3-load-label">Cargar audio</span>
+                </button>
+                <input type="file" id="track3-file-input" accept=".mp3,.wav,.wave,audio/mpeg,audio/wav,audio/x-wav,audio/wave" style="display:none">
+                <button class="btn btn-secondary" id="track3-play" type="button" disabled>
+                  <svg class="icon" id="track3-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+                  <span id="track3-play-label">Play</span>
+                </button>
+                <button class="btn icon-btn" id="track3-clear" type="button" disabled aria-label="Borrar pista" title="Borrar pista">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
+                </button>
+              </div>
+            </div>
+            <!-- Track mini waveform -->
+            <div class="track-wave-wrap" id="track3-viewport">
+              <div class="track-wave-zoomframe" id="track3-zoomframe">
+                <canvas id="track3-canvas"></canvas>
+                <div class="trim-shade" id="track3-shade-start" style="left:0;width:0"></div>
+                <div class="trim-shade" id="track3-shade-end"   style="right:0;width:0"></div>
+                <div class="trim-handle start hidden" id="track3-handle-start">
+                  <div class="trim-badge" id="track3-badge-start"></div>
+                </div>
+                <div class="trim-handle end hidden" id="track3-handle-end">
+                  <div class="trim-badge" id="track3-badge-end"></div>
+                </div>
+                <div class="seek-strip" id="track3-seek-strip"></div>
+                <div class="seek-cursor" id="track3-seek-cursor" style="left:0"></div>
+                <div class="seek-badge" id="track3-seek-badge">0.000s</div>
+              </div>
+              <div class="track-wave-empty" id="track3-wave-empty">Sin audio cargado</div>
+              <div class="dropzone-overlay" id="track3-dropzone">Soltar archivo de audio aqui</div>
+            </div>
+            <div class="zoom-row track-zoom-row">
+              <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
+              <input type="range" id="track3-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda de la pista">
+              <span class="readout" id="track3-zoom-readout">1.0x</span>
+              <button class="trim-undo-btn" id="track3-trim-undo" type="button" disabled title="Deshacer corte" aria-label="Deshacer corte">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"></path></svg>
+              </button>
+              <button class="trim-undo-btn" id="track3-trim-redo" type="button" disabled title="Rehacer corte" aria-label="Rehacer corte">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
+              </button>
+            </div>
+            <!-- Ecualizador profesional — Pista 3 -->
+            <div class="track-eq-block pro-eq-host">
+              <div class="pro-eq-panel" data-eq-target="track3" data-eq-title="Pista 3"></div>
+            </div>
+            <!-- Puerta de ruido / reduccion de ruido — Pista 3 -->
+            <div class="track-gate-block">
+              <div class="pro-gate-panel" data-gate-target="track3" data-gate-title="Pista 3"></div>
+            </div>
+            <!-- Filtro Notch quirurgico anti-zumbido electrico — Pista 3 -->
+            <div class="track-hum-block">
+              <div class="pro-hum-panel" data-hum-target="track3" data-hum-title="Pista 3"></div>
+            </div>
+          </div>
+
+          <!-- Mix de pistas -->
+          <div class="track-card" id="mix-track-card">
+            <div class="track-card-inner">
+              <div class="track-head">
+                <input type="text" class="track-name-input" id="mix-name" value="Mix de pistas (edita el nombre)" maxlength="40" aria-label="Nombre del mix de pistas">
+                <span class="track-status" id="mix-status">Vacia</span>
+              </div>
+              <div class="track-actions mix-actions">
+                <button class="btn btn-main" id="mix-record" type="button">
+                  <svg class="icon" id="mix-rec-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle></svg>
+                  <span id="mix-rec-label">Grabar pistas que contengan audios</span>
+                </button>
+                <button class="btn btn-secondary" id="mix-mix" type="button" disabled>
+                  <svg class="icon" id="mix-mix-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10v2H4zm0 8h16v2H4zm12-9h4v4h-4zm-6 8h4v4h-4z"></path></svg>
+                  <span>Mezclar pistas que contengan audios cargados</span>
+                </button>
+                <button class="btn btn-secondary" id="mix-play" type="button" disabled>
+                  <svg class="icon" id="mix-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+                  <span id="mix-play-label">Reproducir mezcla</span>
+                </button>
+                <button class="btn icon-btn btn-download" id="mix-download" type="button" disabled aria-label="Descargar mezcla como MP3" title="Descargar MP3">
+                  <svg class="icon" id="mix-dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
+                </button>
+                <button class="btn icon-btn btn-download" id="mix-download-wav" type="button" disabled aria-label="Descargar mezcla como WAV" title="Descargar WAV (alta calidad)">
+                  <svg class="icon" id="mix-dl-wav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
+                </button>
+                <button class="btn icon-btn" id="mix-clear" type="button" disabled aria-label="Borrar mezcla" title="Borrar pista">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
+                </button>
+              </div>
+            </div>
+            <div class="track-wave-wrap" id="mix-viewport">
+              <div class="track-wave-zoomframe" id="mix-zoomframe">
+                <canvas id="mix-canvas"></canvas>
+                <div class="trim-shade" id="mix-shade-start" style="left:0;width:0"></div>
+                <div class="trim-shade" id="mix-shade-end"   style="right:0;width:0"></div>
+                <div class="trim-handle start hidden" id="mix-handle-start"><div class="trim-badge" id="mix-badge-start"></div></div>
+                <div class="trim-handle end hidden" id="mix-handle-end"><div class="trim-badge" id="mix-badge-end"></div></div>
+                <div class="seek-strip" id="mix-seek-strip"></div>
+                <div class="seek-cursor" id="mix-seek-cursor" style="left:0"></div>
+                <div class="seek-badge" id="mix-seek-badge">0.000s</div>
+              </div>
+              <div class="track-wave-empty" id="mix-wave-empty">Sin mezcla</div>
+              <div class="dropzone-overlay" id="mix-dropzone">Soltar archivo de audio aqui</div>
+            </div>
+            <div class="zoom-row track-zoom-row">
+              <svg class="icon zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.5 19l-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"></path></svg>
+              <input type="range" id="mix-zoom" min="1" max="8" step="0.5" value="1" disabled aria-label="Zoom de la forma de onda de la mezcla">
+              <span class="readout" id="mix-zoom-readout">1.0x</span>
+              <button class="trim-undo-btn" id="mix-trim-undo" type="button" disabled title="Deshacer corte" aria-label="Deshacer corte"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"></path></svg></button>
+              <button class="trim-undo-btn" id="mix-trim-redo" type="button" disabled title="Rehacer corte" aria-label="Rehacer corte"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg></button>
+            </div>
+            <!-- Ecualizador profesional — Mix de pistas -->
+            <div class="track-eq-block pro-eq-host">
+              <div class="pro-eq-panel" data-eq-target="mix" data-eq-title="Mix de pistas"></div>
+            </div>
+            <!-- Puerta de ruido / reduccion de ruido — Mix de pistas -->
+            <div class="track-gate-block">
+              <div class="pro-gate-panel" data-gate-target="mix" data-gate-title="Mix de pistas"></div>
+            </div>
+            <!-- Filtro Notch quirurgico anti-zumbido electrico — Mix de pistas -->
+            <div class="track-hum-block">
+              <div class="pro-hum-panel" data-hum-target="mix" data-hum-title="Mix de pistas"></div>
             </div>
           </div>
         </div>
@@ -2401,11 +2467,31 @@ const state = {
       // Filtro Notch quirurgico anti-zumbido (50/60 Hz + armonico) — pista
       humValues: defaultHumValues(),
       humNode: null
+    },
+    track3: {
+      buffer: null, sourceNode: null, chunks: [],
+      dataUrl: "", duration: 0, name: "",
+      isRecording: false, isPlaying: false, startTime: 0,
+      waveformData: [], analyser: null, liveRAF: null,
+      zoom: 1, seek: 0,
+      // Pista 3: no graba desde microfono, solo carga de archivos
+      loadedOnly: true,
+      // Ecualizador profesional — pista
+      eqValues: { preamp: 0, bands: [0,0,0,0,0,0,0,0,0,0], bypassed: false },
+      eqNodes: null,
+      // Puerta de ruido / reduccion de ruido — pista
+      gateValues: defaultGateValues(),
+      gateNode: null,
+      // Filtro Notch quirurgico anti-zumbido (50/60 Hz + armonico) — pista
+      humValues: defaultHumValues(),
+      humNode: null
     }
   }
 };
 
-const trackIds = ["track1", "mix", "track2"];
+const trackIds = ["track1", "mix", "track2", "track3"];
+// Pistas fuente que participan en mezcla / grabacion combinada (todas menos el propio Mix)
+const sourceTrackIds = ["track1", "track2", "track3"];
 
 /* ─── ELEMENTOS DOM ─── */
 const els = {
@@ -2506,6 +2592,9 @@ trackIds.forEach(id => {
     seekStrip:   document.getElementById(`${id}-seek-strip`),
     seekCursor:  document.getElementById(`${id}-seek-cursor`),
     seekBadge:   document.getElementById(`${id}-seek-badge`),
+    loadButton:  document.getElementById(`${id}-load`),
+    loadLabel:   document.getElementById(`${id}-load-label`),
+    fileInput:   document.getElementById(`${id}-file-input`),
   };
 });
 
@@ -4877,40 +4966,40 @@ function setStatus(mode) {
 function setTrackStatus(id, mode) {
   const track = state.tracks[id];
   const e = tracksEls[id];
-  e.record.classList.toggle("active", mode === "recording" || mode === "countin");
+  e.record?.classList.toggle("active", mode === "recording" || mode === "countin");
   e.play.classList.toggle("active", mode === "playing");
-  e.recIcon.innerHTML = (mode === "recording" || mode === "countin") ? stopIcon : recordIcon;
+  if (e.recIcon) e.recIcon.innerHTML = (mode === "recording" || mode === "countin") ? stopIcon : recordIcon;
   e.playIcon.innerHTML = mode === "playing" ? stopIcon : playIcon;
 
   if (mode === "countin") {
     e.status.textContent = `Cuenta ${state.countInBars} compas${state.countInBars === 1 ? "" : "es"}`;
-    e.recLabel.textContent = "Cancelar";
-    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
+    if (e.recLabel) e.recLabel.textContent = "Cancelar";
+    e.play.disabled = true; e.clear.disabled = true; if (e.download) e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
     if (typeof updateComboButtons === "function") updateComboButtons();
     return;
   }
   if (mode === "recording") {
     e.status.textContent = id === "mix" ? "Grabando ambas" : "Grabando";
-    e.recLabel.textContent = "Detener";
-    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
+    if (e.recLabel) e.recLabel.textContent = "Detener";
+    e.play.disabled = true; e.clear.disabled = true; if (e.download) e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
     if (typeof updateComboButtons === "function") updateComboButtons();
     return;
   }
   if (mode === "playing") {
     e.status.textContent = "Reproduciendo";
-    e.recLabel.textContent = "Grabar"; e.playLabel.textContent = "Pausa";
+    if (e.recLabel) e.recLabel.textContent = "Grabar"; e.playLabel.textContent = "Pausa";
     e.play.disabled = false; e.clear.disabled = false;
     if (typeof updateComboButtons === "function") updateComboButtons();
     return;
   }
   if (track.buffer) {
     e.status.textContent = `${track.duration.toFixed(3)}s`;
-    e.play.disabled = false; e.clear.disabled = false; e.download.disabled = false; if (e.downloadWav) e.downloadWav.disabled = false;
+    e.play.disabled = false; e.clear.disabled = false; if (e.download) e.download.disabled = false; if (e.downloadWav) e.downloadWav.disabled = false;
   } else {
     e.status.textContent = "Vacia";
-    e.play.disabled = true; e.clear.disabled = true; e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
+    e.play.disabled = true; e.clear.disabled = true; if (e.download) e.download.disabled = true; if (e.downloadWav) e.downloadWav.disabled = true;
   }
-  e.recLabel.textContent = id === "mix" ? "Grabar ambas pistas" : "Grabar";
+  if (e.recLabel) e.recLabel.textContent = id === "mix" ? "Grabar pistas que contengan audios" : "Grabar";
   e.playLabel.textContent = id === "mix" ? "Reproducir mezcla" : "Play";
   if (typeof updateMixButton === "function") updateMixButton();
   if (typeof updatePlayTodoBtn === "function") updatePlayTodoBtn();
@@ -5472,7 +5561,7 @@ trackIds.forEach(id => setupDropzone(tracksEls[id].viewport, tracksEls[id].dropz
 function updateMixButton() {
   const e = tracksEls.mix;
   if (!e || !e.mixButton) return;
-  e.mixButton.disabled = !(state.tracks.track1.buffer && state.tracks.track2.buffer) || !!state.multiTrackRecording;
+  e.mixButton.disabled = tracksWithAudio().length === 0 || !!state.multiTrackRecording;
 }
 
 /* Habilita/deshabilita los botones "Reproducir pista X y grabar pista Y":
@@ -5610,21 +5699,31 @@ async function stopDualTrackRecording() {
   updateMixButton();
 }
 
+function tracksWithAudio() {
+  return sourceTrackIds.filter(id => !!state.tracks[id].buffer);
+}
+
 async function createMixFromTracks() {
   if (!(await initAudio())) return;
-  const t1 = state.tracks.track1, t2 = state.tracks.track2, mix = state.tracks.mix;
-  if (!t1.buffer || !t2.buffer) { showMicError("Para mezclar necesitas tener audio en Pista 1 y Pista 2."); return; }
+  const mix = state.tracks.mix;
+  const activeIds = tracksWithAudio();
+  if (!activeIds.length) { showMicError("Para mezclar necesitas tener audio en al menos una pista (1, 2 o 3)."); return; }
   try {
-    const b1 = await renderWithEQ(t1.buffer, t1.eqValues, t1.gateValues, t1.humValues);
-    const b2 = await renderWithEQ(t2.buffer, t2.eqValues, t2.gateValues, t2.humValues);
+    const rendered = [];
+    for (const id of activeIds) {
+      const t = state.tracks[id];
+      rendered.push(await renderWithEQ(t.buffer, t.eqValues, t.gateValues, t.humValues));
+    }
     const sampleRate = state.audioCtx.sampleRate;
-    const length = Math.max(b1.length, b2.length);
+    const length = Math.max(...rendered.map(b => b.length));
     const out = state.audioCtx.createBuffer(1, length, sampleRate);
     const ch = out.getChannelData(0);
-    const a = b1.getChannelData(0), b = b2.getChannelData(0);
+    const chans = rendered.map(b => b.getChannelData(0));
+    const n = chans.length;
     for (let i = 0; i < length; i++) {
-      const mixed = ((a[i] || 0) + (b[i] || 0)) * 0.5;
-      ch[i] = Math.max(-1, Math.min(1, mixed));
+      let sum = 0;
+      for (let k = 0; k < n; k++) sum += (chans[k][i] || 0);
+      ch[i] = Math.max(-1, Math.min(1, sum / n));
     }
     mix.buffer = out;
     mix.duration = out.duration;
@@ -5635,7 +5734,7 @@ async function createMixFromTracks() {
     setTrackStatus("mix", "ready");
   } catch (err) {
     console.error(err);
-    showMicError("No se pudo crear la mezcla. Revisa que ambas pistas tengan audio valido.");
+    showMicError("No se pudo crear la mezcla. Revisa que las pistas tengan audio valido.");
   }
 }
 
@@ -5659,7 +5758,7 @@ trackIds.forEach(id => {
     saveTrackName(id);
   });
 
-  e.record.addEventListener("click", async () => {
+  e.record?.addEventListener("click", async () => {
     if (id === "mix") {
       if (state.multiTrackRecording || (state.countInActive && state.activeTarget === "mix")) await stopDualTrackRecording();
       else await startDualTrackRecording();
@@ -5685,8 +5784,18 @@ trackIds.forEach(id => {
     if (track.buffer && window.confirm(`Borrar "${track.name}"?`)) clearTrack(id);
   });
 
-  e.download.addEventListener("click", () => downloadTrackMP3(id));
+  e.download?.addEventListener("click", () => downloadTrackMP3(id));
   e.downloadWav?.addEventListener("click", () => downloadTrackWAV(id));
+
+  // Pista 3: boton "Cargar audio" (no graba desde microfono)
+  if (track.loadedOnly && e.loadButton && e.fileInput) {
+    e.loadButton.addEventListener("click", () => e.fileInput.click());
+    e.fileInput.addEventListener("change", async () => {
+      const file = e.fileInput.files && e.fileInput.files[0];
+      e.fileInput.value = "";
+      if (file) await loadAudioFileInto(id, file);
+    });
+  }
 });
 
 /* Botones "Reproducir pista 1 y grabar pista 2" / "Reproducir pista 2 y
@@ -5980,7 +6089,8 @@ function parseVoiceCommand(rawText) {
   // "pista 1" como "pista uno".
   text = " " + text + " ";
   text = text.replace(/\b(uno|una|primera|primero)\b/g, "1")
-             .replace(/\b(dos|segunda|segundo)\b/g, "2");
+             .replace(/\b(dos|segunda|segundo)\b/g, "2")
+             .replace(/\b(tres|tercera|tercero)\b/g, "3");
 
   const words = text.trim().split(/\s+/);
   const has = w => words.includes(w);
@@ -6006,6 +6116,7 @@ function parseVoiceCommand(rawText) {
     if (has("mezcla") || has("mix") || has("mezclar")) return { action: "play", target: "mix" };
     if (has("1")) return { action: "play", target: "track1" };
     if (has("2")) return { action: "play", target: "track2" };
+    if (has("3")) return { action: "play", target: "track3" };
   }
 
   // 4) MEZCLAR PISTAS (generar la mezcla a partir de pista 1 + pista 2)
