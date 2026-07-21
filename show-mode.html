@@ -306,6 +306,60 @@
   .eq-band input[type="range"]::-moz-range-progress { height:4px;background:var(--amber); }
   .eq-band input[type="range"]::-moz-range-thumb { width:18px;height:12px;border:1px solid var(--amber-2);border-radius:3px;background:#2b251c; }
   .equalizer-scale { display:flex;justify-content:space-between;margin-top:7px;color:var(--soft);font:8px var(--mono);text-transform:uppercase; }
+  .eq-save-toast { font:700 9px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--green);opacity:0;transition:opacity .25s ease;pointer-events:none;white-space:nowrap; }
+  .eq-save-toast.show { opacity:1; }
+
+  /* ── PUERTA DE RUIDO / REDUCCION DE RUIDO ── */
+  .track-gate-block { min-width: 0; margin-top: 8px; }
+  .pro-gate-panel { padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),#11100f; background-size: 18px 18px; overflow: hidden; }
+  .pro-gate-header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; flex-wrap: wrap; }
+  .pro-gate-heading { display:flex; align-items:center; gap:7px; min-width:0; }
+  .pro-gate-title { color:var(--amber-2); font:700 9px var(--mono); letter-spacing:.12em; text-transform:uppercase; }
+  .pro-gate-subtitle { color:var(--soft); font:7px var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+  .pro-gate-led { width:8px; height:8px; border-radius:50%; background:var(--soft); box-shadow:0 0 0 3px rgba(255,255,255,.03); flex:0 0 auto; transition: background .08s ease, box-shadow .08s ease; }
+  .pro-gate-led.open { background: var(--green); box-shadow: 0 0 12px rgba(143,210,156,.55); }
+  .pro-gate-actions { display:flex; align-items:center; justify-content:flex-end; gap:5px; flex-wrap:wrap; }
+  .pro-gate-btn { min-height:24px; padding:0 7px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); color:var(--muted); font:700 7px var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+  .pro-gate-btn:hover { border-color:rgba(240,179,90,.4); color:var(--amber-2); }
+  .pro-gate-btn.active { border-color:rgba(143,210,156,.55); background:rgba(143,210,156,.1); color:#bfe9c6; }
+  .pro-gate-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px 14px; }
+  .pro-gate-control { display:grid; gap:4px; }
+  .pro-gate-control-top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .pro-gate-label { color:var(--soft); font:7px var(--mono); letter-spacing:.08em; text-transform:uppercase; }
+  .pro-gate-value { color:var(--amber-2); font:7px var(--mono); font-variant-numeric:tabular-nums; }
+  .pro-gate-control input[type="range"] { width:100%; height:6px; }
+  .pro-gate-control input[type="range"]::-webkit-slider-runnable-track { height:3px; border-radius:999px; background:linear-gradient(90deg,var(--amber) var(--fill,50%),var(--panel-3) var(--fill,50%)); }
+  .pro-gate-control input[type="range"]::-webkit-slider-thumb { appearance:none; width:12px; height:12px; margin-top:-4.5px; border-radius:50%; border:1px solid var(--amber-2); background:#2b251c; box-shadow:0 0 8px rgba(240,179,90,.3); }
+  .pro-gate-control input[type="range"]::-moz-range-track { height:3px; border-radius:999px; background:var(--panel-3); }
+  .pro-gate-control input[type="range"]::-moz-range-progress { height:3px; background:var(--amber); }
+  .pro-gate-control input[type="range"]::-moz-range-thumb { width:12px; height:12px; border-radius:50%; border:1px solid var(--amber-2); background:#2b251c; }
+  .pro-gate-panel.disabled .pro-gate-grid { opacity:.4; pointer-events:none; }
+  @media (max-width: 600px) { .pro-gate-header { align-items:flex-start; flex-direction:column; } .pro-gate-actions { justify-content:flex-start; } }
+
+  /* ── FILTRO NOTCH QUIRURGICO ANTI-ZUMBIDO ── */
+  .track-hum-block { min-width: 0; margin-top: 8px; }
+  .pro-hum-panel { padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),#11100f; background-size: 18px 18px; overflow: hidden; }
+  .pro-hum-panel.disabled .pro-hum-grid { opacity:.4; pointer-events:none; }
+  .pro-hum-header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; flex-wrap: wrap; }
+  .pro-hum-heading { display:flex; align-items:center; gap:7px; min-width:0; }
+  .pro-hum-title { color:var(--amber-2); font:700 9px var(--mono); letter-spacing:.12em; text-transform:uppercase; }
+  .pro-hum-subtitle { color:var(--soft); font:7px var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+  .pro-hum-actions { display:flex; align-items:center; justify-content:flex-end; gap:5px; flex-wrap:wrap; }
+  .pro-hum-btn { min-height:24px; padding:0 7px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); color:var(--muted); font:700 7px var(--mono); letter-spacing:.06em; text-transform:uppercase; cursor:pointer; }
+  .pro-hum-btn:hover { border-color:rgba(240,179,90,.4); color:var(--amber-2); }
+  .pro-hum-btn.active { border-color:rgba(143,210,156,.55); background:rgba(143,210,156,.1); color:#bfe9c6; }
+  .pro-hum-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px 14px; }
+  .pro-hum-control { display:grid; gap:4px; }
+  .pro-hum-control-top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .pro-hum-label { color:var(--soft); font:7px var(--mono); letter-spacing:.08em; text-transform:uppercase; }
+  .pro-hum-value { color:var(--amber-2); font:7px var(--mono); font-variant-numeric:tabular-nums; }
+  .pro-hum-control input[type="range"] { width:100%; height:6px; }
+  .pro-hum-control input[type="range"]::-webkit-slider-runnable-track { height:3px; border-radius:999px; background:linear-gradient(90deg,var(--amber) var(--fill,50%),var(--panel-3) var(--fill,50%)); }
+  .pro-hum-control input[type="range"]::-webkit-slider-thumb { appearance:none; width:12px; height:12px; margin-top:-4.5px; border-radius:50%; border:1px solid var(--amber-2); background:#2b251c; box-shadow:0 0 8px rgba(240,179,90,.3); }
+  .pro-hum-control input[type="range"]::-moz-range-track { height:3px; border-radius:999px; background:var(--panel-3); }
+  .pro-hum-control input[type="range"]::-moz-range-progress { height:3px; background:var(--amber); }
+  .pro-hum-control input[type="range"]::-moz-range-thumb { width:12px; height:12px; border-radius:50%; border:1px solid var(--amber-2); background:#2b251c; }
+  @media (max-width: 600px) { .pro-hum-header { align-items:flex-start; flex-direction:column; } .pro-hum-actions { justify-content:flex-start; } }
 
   .visualizer-wrap {
     position: relative;
@@ -447,6 +501,7 @@
     color: var(--muted);
     font-size: 12px;
     margin-top: 10px;
+    margin-bottom: 16px;
   }
   .status-led {
     width: 8px; height: 8px;
@@ -478,7 +533,7 @@
   .setlist-section, .player-section { min-width: 0; min-height: 0; }
   .setlist-section { display: flex; flex-direction: column; overflow: hidden; }
   .setlist { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px; scrollbar-color: var(--line-hi) transparent; }
-  .player-section { display: flex; flex-direction: column; overflow: hidden; }
+  .player-section { display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; padding-right: 4px; scrollbar-color: var(--line-hi) transparent; }
   .now-playing { flex: 0 0 auto; }
   .visualizer-wrap {
     flex: 0 0 clamp(76px, 12vh, 96px);
@@ -492,7 +547,7 @@
     block-size: 100% !important;
     max-inline-size: 100%;
   }
-  .equalizer-panel { flex: 1 1 auto; min-height: 205px; overflow: hidden; }
+  .equalizer-panel { flex: 0 0 auto; min-height: 205px; overflow: hidden; }
   .eq-band { grid-template-rows: 18px 104px 16px; }
   .eq-band input[type="range"] { width: 104px; margin: 40px -28px; }
   .player-controls, .volume-row, .status-pill { flex: 0 0 auto; }
@@ -556,17 +611,7 @@
       <canvas id="visualizer-canvas"></canvas>
       <div class="visualizer-idle" id="visualizer-idle">Sin señal</div>
     </div>
-    <div class="equalizer-panel" aria-labelledby="equalizer-title">
-      <div class="equalizer-header">
-        <div class="equalizer-heading"><h2 class="equalizer-title" id="equalizer-title">Ecualizador profesional</h2><span class="equalizer-subtitle">10 bandas · ±12 dB · Limitador</span></div>
-        <div class="equalizer-actions">
-          <select class="eq-preset" id="eq-preset" aria-label="Preset de ecualización"><option value="flat">Plano</option><option value="live">Show en vivo</option><option value="vocal">Voz al frente</option><option value="warm">Cálido</option><option value="clarity">Claridad</option></select>
-          <button class="eq-btn" id="eq-reset" type="button">Reset</button><button class="eq-btn" id="eq-bypass" type="button" aria-pressed="false">Bypass</button>
-        </div>
-      </div>
-      <div class="equalizer-scroll"><div class="equalizer-bands" id="equalizer-bands"></div></div>
-      <div class="equalizer-scale"><span>−12 dB</span><span>0 dB</span><span>+12 dB</span></div>
-    </div>    <div class="player-controls">
+    <div class="player-controls">
       <button class="play-btn" id="play-pause-btn" type="button" disabled title="Play / Pause">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" id="play-icon-svg"><path d="M8 5v14l11-7z"/></svg>
       </button>
@@ -591,6 +636,24 @@
     <div class="status-pill">
       <span class="status-led" id="status-led"></span>
       <span id="status-text">Listo</span>
+    </div>
+    <div class="equalizer-panel" aria-labelledby="equalizer-title">
+      <div class="equalizer-header">
+        <div class="equalizer-heading"><h2 class="equalizer-title" id="equalizer-title">Ecualizador profesional</h2><span class="equalizer-subtitle">10 bandas · ±12 dB · Limitador</span></div>
+        <div class="equalizer-actions">
+          <select class="eq-preset" id="eq-preset" aria-label="Preset de ecualización"><option value="flat">Plano</option><option value="live">Show en vivo</option><option value="vocal">Voz al frente</option><option value="warm">Cálido</option><option value="clarity">Claridad</option><option value="custom">Personalizar</option></select>
+          <button class="eq-btn" id="eq-reset" type="button">Reset</button><button class="eq-btn" id="eq-bypass" type="button" aria-pressed="false">Bypass</button><button class="eq-btn" id="eq-save-custom" type="button">Guardar ecualización personalizada</button>
+          <span class="eq-save-toast" id="eq-save-toast" aria-live="polite"></span>
+        </div>
+      </div>
+      <div class="equalizer-scroll"><div class="equalizer-bands" id="equalizer-bands"></div></div>
+      <div class="equalizer-scale"><span>−12 dB</span><span>0 dB</span><span>+12 dB</span></div>
+    </div>
+    <div class="track-gate-block">
+      <div class="pro-gate-panel" id="gate-panel" data-gate-target="show" data-gate-title="Canción"></div>
+    </div>
+    <div class="track-hum-block">
+      <div class="pro-hum-panel" id="hum-panel" data-hum-target="show" data-hum-title="Canción"></div>
     </div>
   </section>
 </main>
@@ -621,13 +684,41 @@
   let eqFilters = [];
   let eqLimiter = null;
   let eqOutputGain = null;
+  // songId -> { values: [preamp, ...10 bandas], bypassed: bool }
+  const customEqMap = new Map();
+
+  // ── PUERTA DE RUIDO / REDUCCION DE RUIDO + FILTRO NOTCH ANTI-ZUMBIDO ──
+  // Misma logica y arquitectura de audio que en index.html: en la cadena
+  // de la canción reproducida el orden es fuente → filtro notch → puerta
+  // de ruido → ecualizador → salida general.
+  function defaultGateValues() {
+    // threshold/range en dB, attack/release/hold en milisegundos.
+    return { threshold: -45, range: -60, attack: 3, release: 150, hold: 60, bypassed: true };
+  }
+  function defaultHumValues() {
+    // Filtro Notch quirurgico anti-zumbido electrico. Cubre a la vez el
+    // zumbido de red de 50 Hz (Chile/Europa) y de 60 Hz (EE.UU. y otros
+    // paises) junto con sus armonicos. Activado por defecto.
+    return { enabled: true, q: 12 };
+  }
+  let gateValues;
+  try { gateValues = { ...defaultGateValues(), ...(JSON.parse(localStorage.getItem('ayun-show-gate')) || {}) }; }
+  catch (_) { gateValues = defaultGateValues(); }
+  let humValues;
+  try { humValues = { ...defaultHumValues(), ...(JSON.parse(localStorage.getItem('ayun-show-hum')) || {}) }; }
+  catch (_) { humValues = defaultHumValues(); }
+  let humChain = null;      // { input, output, dry, wet, notches }
+  let gateNode = null;      // AudioWorkletNode
+  let gateWorkletReady = false;
+  let gateWorkletAttempted = false;
 
   // ── PERSISTENCIA (IndexedDB) ──
   // Guarda los archivos de audio (blobs) + nombre + orden, para que el
   // setlist quede disponible aunque se cierre o recargue la página.
   const DB_NAME = 'ayun-duo-show-mode';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
   const STORE_NAME = 'songs';
+  const EQ_STORE_NAME = 'customEq'; // ecualizaciones personalizadas por canción (keyPath: songId)
   let dbPromise = null;
 
   function openDB() {
@@ -638,6 +729,9 @@
         const db = req.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(EQ_STORE_NAME)) {
+          db.createObjectStore(EQ_STORE_NAME, { keyPath: 'songId' });
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -703,6 +797,64 @@
     }
   }
 
+  // ── PERSISTENCIA DE ECUALIZACIÓN PERSONALIZADA POR CANCIÓN ──
+  async function dbPutCustomEq(record) {
+    try {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(EQ_STORE_NAME, 'readwrite');
+        tx.objectStore(EQ_STORE_NAME).put(record);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (err) {
+      console.error('No se pudo guardar la ecualización personalizada:', err);
+    }
+  }
+
+  async function dbDeleteCustomEq(songId) {
+    try {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(EQ_STORE_NAME, 'readwrite');
+        tx.objectStore(EQ_STORE_NAME).delete(songId);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (err) {
+      console.error('No se pudo borrar la ecualización personalizada:', err);
+    }
+  }
+
+  async function dbClearCustomEq() {
+    try {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(EQ_STORE_NAME, 'readwrite');
+        tx.objectStore(EQ_STORE_NAME).clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (err) {
+      console.error('No se pudo vaciar las ecualizaciones personalizadas:', err);
+    }
+  }
+
+  async function dbGetAllCustomEq() {
+    try {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(EQ_STORE_NAME, 'readonly');
+        const req = tx.objectStore(EQ_STORE_NAME).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (err) {
+      console.error('No se pudo leer las ecualizaciones personalizadas:', err);
+      return [];
+    }
+  }
+
   // Reescribe el campo "order" de todas las canciones según su posición
   // actual en el array `songs`, y lo persiste.
   function persistOrder() {
@@ -743,6 +895,8 @@
   const eqPreset = document.getElementById('eq-preset');
   const eqReset = document.getElementById('eq-reset');
   const eqBypass = document.getElementById('eq-bypass');
+  const eqSaveCustom = document.getElementById('eq-save-custom');
+  const eqSaveToast = document.getElementById('eq-save-toast');
 
 
   // ── HELPERS ──
@@ -775,12 +929,295 @@
   // ── SETLIST RENDER ──
   function formatDb(value){const n=Number(value);return(n>0?'+':'')+n.toFixed(1)+' dB';}
   function applyEqualizerValues(){if(eqInputGain)eqInputGain.gain.value=eqBypassed?1:Math.pow(10,Number(eqValues[0])/20);eqFilters.forEach((filter,index)=>filter.gain.value=eqBypassed?0:Number(eqValues[index+1]));try{localStorage.setItem('ayun-show-eq',JSON.stringify(eqValues));}catch(_){}}
-  function renderEqualizer(){equalizerBands.innerHTML='';['PRE',...EQ_LABELS].forEach((label,index)=>{const band=document.createElement('label');band.className='eq-band';band.innerHTML=`<span class="eq-value">${formatDb(eqValues[index])}</span><input type="range" min="-12" max="12" step="0.5" value="${eqValues[index]}" aria-label="${index===0?'Preamplificador':'Banda '+label+' hercios'}"><span class="eq-frequency">${label}</span>`;const slider=band.querySelector('input'),value=band.querySelector('.eq-value');slider.addEventListener('input',()=>{eqValues[index]=Number(slider.value);value.textContent=formatDb(slider.value);eqPreset.value='flat';applyEqualizerValues();});equalizerBands.appendChild(band);});}
-  function ensureEqualizerGraph(){const ctx=getAudioCtx();if(!eqInputGain){eqInputGain=ctx.createGain();eqFilters=EQ_FREQUENCIES.map((frequency,index)=>{const filter=ctx.createBiquadFilter();filter.type=index===0?'lowshelf':(index===EQ_FREQUENCIES.length-1?'highshelf':'peaking');filter.frequency.value=frequency;filter.Q.value=1.4;return filter;});eqLimiter=ctx.createDynamicsCompressor();eqLimiter.threshold.value=-4;eqLimiter.knee.value=3;eqLimiter.ratio.value=20;eqLimiter.attack.value=.003;eqLimiter.release.value=.18;eqOutputGain=ctx.createGain();eqOutputGain.gain.value=.72;let node=eqInputGain;eqFilters.forEach(filter=>{node.connect(filter);node=filter;});node.connect(eqLimiter);eqLimiter.connect(eqOutputGain);eqOutputGain.connect(ctx.destination);applyEqualizerValues();}return ctx;}
-  function connectAudioToEqualizer(){if(!audio)return;try{const ctx=ensureEqualizerGraph();mediaSourceNode=ctx.createMediaElementSource(audio);mediaSourceNode.connect(eqInputGain);}catch(err){console.error('No se pudo conectar el ecualizador:',err);}}
-  eqPreset.addEventListener('change',()=>{eqValues=[0,...(EQ_PRESETS[eqPreset.value]||EQ_PRESETS.flat)];renderEqualizer();applyEqualizerValues();});
+  function renderEqualizer(){equalizerBands.innerHTML='';['PRE',...EQ_LABELS].forEach((label,index)=>{const band=document.createElement('label');band.className='eq-band';band.innerHTML=`<span class="eq-value">${formatDb(eqValues[index])}</span><input type="range" min="-12" max="12" step="0.5" value="${eqValues[index]}" aria-label="${index===0?'Preamplificador':'Banda '+label+' hercios'}"><span class="eq-frequency">${label}</span>`;const slider=band.querySelector('input'),value=band.querySelector('.eq-value');slider.addEventListener('input',()=>{eqValues[index]=Number(slider.value);value.textContent=formatDb(slider.value);eqPreset.value='custom';applyEqualizerValues();});equalizerBands.appendChild(band);});}
+  function ensureEqualizerGraph(){const ctx=getAudioCtx();if(!eqInputGain){eqInputGain=ctx.createGain();eqFilters=EQ_FREQUENCIES.map((frequency,index)=>{const filter=ctx.createBiquadFilter();filter.type=index===0?'lowshelf':(index===EQ_FREQUENCIES.length-1?'highshelf':'peaking');filter.frequency.value=frequency;filter.Q.value=1.4;return filter;});eqLimiter=ctx.createDynamicsCompressor();eqLimiter.threshold.value=-4;eqLimiter.knee.value=3;eqLimiter.ratio.value=20;eqLimiter.attack.value=.003;eqLimiter.release.value=.18;eqOutputGain=ctx.createGain();eqOutputGain.gain.value=.72;let node=eqInputGain;eqFilters.forEach(filter=>{node.connect(filter);node=filter;});node.connect(eqLimiter);eqLimiter.connect(eqOutputGain);eqOutputGain.connect(ctx.destination);applyEqualizerValues();}if(!humChain){humChain=createHumChain(ctx,humValues);humChain.output.connect(eqInputGain);ensureGateChain();}return ctx;}
+  function connectAudioToEqualizer(){if(!audio)return;try{const ctx=ensureEqualizerGraph();mediaSourceNode=ctx.createMediaElementSource(audio);mediaSourceNode.connect(humChain.input);}catch(err){console.error('No se pudo conectar el ecualizador:',err);}}
+
+  /* ─── FILTRO NOTCH QUIRURGICO ANTI-ZUMBIDO (50 Hz + 60 Hz) ───
+     Se ubica ANTES de la puerta de ruido en la cadena de la canción
+     reproducida: fuente → filtro notch → puerta de ruido → ecualizador →
+     salida general. Ataca a la vez la frecuencia fundamental de la red
+     electrica de 50 Hz (Chile, Europa) y de 60 Hz (EE.UU. y otros paises),
+     junto con sus armonicos 2° al 7°/8°, con dieciseis filtros "notch" en
+     serie (Q ajustable), sin tocar el resto del espectro. Al estar siempre
+     activo (y no ser una puerta de ruido), sigue funcionando igual tanto
+     en los silencios como mientras suena la música, sin cortar la señal.
+     Cuando esta desactivado, una mezcla seca/humeda (dry/wet) deja pasar
+     la señal intacta sin reconstruir el grafo de audio. */
+  const HUM_FILTER_FREQUENCIES = [50, 100, 150, 200, 250, 300, 350, 400, 60, 120, 180, 240, 300, 360, 420, 480];
+  function createHumChain(ctx, values) {
+    const input = ctx.createGain();
+    const dry = ctx.createGain();
+    const wet = ctx.createGain();
+    const notches = HUM_FILTER_FREQUENCIES.map(() => { const filter = ctx.createBiquadFilter(); filter.type = 'notch'; return filter; });
+    const output = ctx.createGain();
+    input.connect(dry); dry.connect(output);
+    let node = input;
+    notches.forEach(filter => { node.connect(filter); node = filter; });
+    node.connect(wet); wet.connect(output);
+    const chain = { input, output, dry, wet, notches };
+    applyHumState(values, chain);
+    return chain;
+  }
+  function applyHumState(values, chain) {
+    if (!values || !chain) return;
+    const q = Number(values.q || 12);
+    chain.notches.forEach((filter, index) => { filter.frequency.value = HUM_FILTER_FREQUENCIES[index]; filter.Q.value = q; });
+    const enabled = !!values.enabled;
+    chain.dry.gain.value = enabled ? 0 : 1;
+    chain.wet.gain.value = enabled ? 1 : 0;
+    try { localStorage.setItem('ayun-show-hum', JSON.stringify(values)); } catch (_) {}
+  }
+
+  /* ─── PUERTA DE RUIDO / REDUCCION DE RUIDO (AudioWorklet) ───
+     Se ubica antes del ecualizador en la cadena de la canción: filtro notch
+     → puerta de ruido → ecualizador → salida general. Detecta el nivel de
+     la señal (seguidor de envolvente con ataque/liberacion) y atenua el
+     audio que queda por debajo del umbral, reduciendo el ruido de fondo
+     entre frases sin cortar la señal de forma brusca. */
+  const GATE_WORKLET_NAME = 'ayun-show-noise-gate';
+  const gateWorkletSource = `
+class AyunNoiseGate extends AudioWorkletProcessor {
+  static get parameterDescriptors() {
+    return [
+      { name: "thresholdDb", defaultValue: -45, minValue: -80, maxValue: 0, automationRate: "k-rate" },
+      { name: "rangeDb", defaultValue: -60, minValue: -80, maxValue: 0, automationRate: "k-rate" },
+      { name: "attackMs", defaultValue: 3, minValue: 0.1, maxValue: 200, automationRate: "k-rate" },
+      { name: "releaseMs", defaultValue: 150, minValue: 5, maxValue: 2000, automationRate: "k-rate" },
+      { name: "holdMs", defaultValue: 60, minValue: 0, maxValue: 1000, automationRate: "k-rate" },
+      { name: "bypass", defaultValue: 0, minValue: 0, maxValue: 1, automationRate: "k-rate" }
+    ];
+  }
+  constructor() {
+    super();
+    this._env = 0;
+    this._gain = 1;
+    this._holdCounter = 0;
+    this._reportCounter = 0;
+  }
+  process(inputs, outputs, parameters) {
+    const input = inputs[0];
+    const output = outputs[0];
+    if (!input || !input.length || !input[0] || !input[0].length) return true;
+
+    const bypass = parameters.bypass[0] >= 0.5;
+    const thresholdDb = parameters.thresholdDb[0];
+    const rangeDb = parameters.rangeDb[0];
+    const attackMs = Math.max(0.1, parameters.attackMs[0]);
+    const releaseMs = Math.max(1, parameters.releaseMs[0]);
+    const holdMs = Math.max(0, parameters.holdMs[0]);
+
+    const sr = sampleRate;
+    const attackCoeff = Math.exp(-1 / (sr * (attackMs / 1000)));
+    const releaseCoeff = Math.exp(-1 / (sr * (releaseMs / 1000)));
+    const holdSamples = (holdMs / 1000) * sr;
+
+    const thresholdLin = Math.pow(10, thresholdDb / 20);
+    const floorLin = Math.pow(10, rangeDb / 20);
+
+    const frames = input[0].length;
+    const numChannels = input.length;
+    const gains = new Float32Array(frames);
+    let anyOpen = false;
+
+    for (let i = 0; i < frames; i++) {
+      let level = 0;
+      for (let ch = 0; ch < numChannels; ch++) {
+        const v = Math.abs(input[ch][i] || 0);
+        if (v > level) level = v;
+      }
+      if (level > this._env) this._env = level + (this._env - level) * attackCoeff;
+      else this._env = level + (this._env - level) * releaseCoeff;
+
+      const above = this._env >= thresholdLin;
+      if (above) this._holdCounter = holdSamples;
+      else if (this._holdCounter > 0) this._holdCounter--;
+      const gateOpen = above || this._holdCounter > 0;
+      if (gateOpen) anyOpen = true;
+
+      const targetGain = bypass ? 1 : (gateOpen ? 1 : floorLin);
+      const coeff = targetGain > this._gain ? attackCoeff : releaseCoeff;
+      this._gain = targetGain + (this._gain - targetGain) * coeff;
+      gains[i] = this._gain;
+    }
+
+    for (let ch = 0; ch < numChannels; ch++) {
+      const inCh = input[ch], outCh = output[ch];
+      if (!inCh || !outCh) continue;
+      for (let i = 0; i < frames; i++) outCh[i] = inCh[i] * gains[i];
+    }
+
+    this._reportCounter++;
+    if (this._reportCounter >= 8) {
+      this._reportCounter = 0;
+      this.port.postMessage({ open: anyOpen, gain: this._gain });
+    }
+    return true;
+  }
+}
+registerProcessor("${GATE_WORKLET_NAME}", AyunNoiseGate);
+`;
+  async function ensureGateWorklet(ctx) {
+    if (gateWorkletReady) return true;
+    if (gateWorkletAttempted) return gateWorkletReady;
+    gateWorkletAttempted = true;
+    if (!ctx.audioWorklet) return false;
+    try {
+      const blob = new Blob([gateWorkletSource], { type: 'application/javascript' });
+      const url = URL.createObjectURL(blob);
+      await ctx.audioWorklet.addModule(url);
+      URL.revokeObjectURL(url);
+      gateWorkletReady = true;
+    } catch (e) {
+      console.error('No se pudo iniciar la puerta de ruido (AudioWorklet). El audio se reproducira sin reduccion de ruido.', e);
+      gateWorkletReady = false;
+    }
+    return gateWorkletReady;
+  }
+  function createGateNode(ctx, values) {
+    const node = new AudioWorkletNode(ctx, GATE_WORKLET_NAME, { numberOfInputs: 1, numberOfOutputs: 1 });
+    node.onprocessorerror = e => console.error('Error en la puerta de ruido:', e);
+    applyGateState(values, node);
+    return node;
+  }
+  function applyGateState(values, node) {
+    if (values) { try { localStorage.setItem('ayun-show-gate', JSON.stringify(values)); } catch (_) {} }
+    if (!values || !node || !node.parameters) return;
+    const p = node.parameters;
+    p.get('thresholdDb').value = Number(values.threshold ?? -45);
+    p.get('rangeDb').value = Number(values.range ?? -60);
+    p.get('attackMs').value = Number(values.attack ?? 3);
+    p.get('releaseMs').value = Number(values.release ?? 150);
+    p.get('holdMs').value = Number(values.hold ?? 60);
+    p.get('bypass').value = values.bypassed ? 1 : 0;
+  }
+  async function ensureGateChain() {
+    const ctx = getAudioCtx();
+    const ready = await ensureGateWorklet(ctx);
+    if (!ready || gateNode || !humChain) return;
+    gateNode = createGateNode(ctx, gateValues);
+    try { humChain.output.disconnect(eqInputGain); } catch (e) {}
+    humChain.output.connect(gateNode);
+    gateNode.connect(eqInputGain);
+    watchGateNode(gateNode);
+  }
+  // Actualiza el LED de estado (abierta/cerrada) del panel de puerta de
+  // ruido a partir de los mensajes que envia el AudioWorklet.
+  function watchGateNode(node) {
+    if (!node || !node.port) return;
+    node.port.onmessage = ev => {
+      const panel = document.querySelector('[data-gate-target="show"]');
+      const led = panel?.querySelector('.pro-gate-led');
+      if (led) led.classList.toggle('open', !!ev.data?.open);
+    };
+  }
+
+  /* ─── UI: PUERTA DE RUIDO / REDUCCION DE RUIDO ─── */
+  function updateRangeFill(rangeEl) {
+    if (!rangeEl) return;
+    const min = Number(rangeEl.min) || 0;
+    const max = Number(rangeEl.max) || 100;
+    const value = Number(rangeEl.value);
+    const fill = max > min ? ((value - min) / (max - min)) * 100 : 0;
+    rangeEl.style.setProperty('--fill', `${fill}%`);
+  }
+  function formatGateDb(value) { return Math.round(Number(value)) + ' dB'; }
+  function formatGateMs(value) { const n = Number(value); return (n < 10 ? n.toFixed(1) : Math.round(n)) + ' ms'; }
+  const GATE_CONTROLS = [
+    { key: 'threshold', label: 'Umbral', min: -80, max: 0, step: 1, format: formatGateDb },
+    { key: 'range', label: 'Reducción máx.', min: -80, max: 0, step: 1, format: formatGateDb },
+    { key: 'attack', label: 'Ataque', min: 0.1, max: 50, step: 0.1, format: formatGateMs },
+    { key: 'release', label: 'Liberación', min: 5, max: 1000, step: 5, format: formatGateMs },
+    { key: 'hold', label: 'Retención', min: 0, max: 500, step: 5, format: formatGateMs }
+  ];
+  function renderNoiseGate(target, values, getNodes) {
+    const panel = document.querySelector(`[data-gate-target="${target}"]`); if (!panel) return;
+    panel.classList.toggle('disabled', values.bypassed);
+    panel.innerHTML = `<div class="pro-gate-header"><div class="pro-gate-heading"><span class="pro-gate-led" aria-hidden="true"></span><div><div class="pro-gate-title">Puerta de ruido</div><div class="pro-gate-subtitle">Reducción de ruido de fondo</div></div></div><div class="pro-gate-actions"><button class="pro-gate-btn pro-gate-reset" type="button">Reset</button><button class="pro-gate-btn pro-gate-toggle${values.bypassed ? '' : ' active'}" type="button" aria-pressed="${!values.bypassed}">${values.bypassed ? 'Activar' : 'Desactivar'}</button></div></div><div class="pro-gate-grid"></div>`;
+    const grid = panel.querySelector('.pro-gate-grid'), toggle = panel.querySelector('.pro-gate-toggle');
+    GATE_CONTROLS.forEach(control => {
+      const wrap = document.createElement('div'); wrap.className = 'pro-gate-control';
+      const currentValue = values[control.key];
+      wrap.innerHTML = `<div class="pro-gate-control-top"><span class="pro-gate-label">${control.label}</span><span class="pro-gate-value">${control.format(currentValue)}</span></div><input type="range" min="${control.min}" max="${control.max}" step="${control.step}" value="${currentValue}" aria-label="${control.label} de la puerta de ruido">`;
+      const slider = wrap.querySelector('input'), readout = wrap.querySelector('.pro-gate-value');
+      updateRangeFill(slider);
+      slider.addEventListener('input', () => { const v = Number(slider.value); values[control.key] = v; readout.textContent = control.format(v); updateRangeFill(slider); applyGateState(values, getNodes()); });
+      grid.appendChild(wrap);
+    });
+    panel.querySelector('.pro-gate-reset').addEventListener('click', () => {
+      const defaults = defaultGateValues();
+      ['threshold', 'range', 'attack', 'release', 'hold'].forEach(key => { values[key] = defaults[key]; });
+      renderNoiseGate(target, values, getNodes); applyGateState(values, getNodes());
+    });
+    toggle.addEventListener('click', () => {
+      values.bypassed = !values.bypassed;
+      renderNoiseGate(target, values, getNodes); applyGateState(values, getNodes());
+    });
+  }
+  renderNoiseGate('show', gateValues, () => gateNode);
+
+  /* ─── UI: FILTRO NOTCH QUIRURGICO ANTI-ZUMBIDO (50 Hz + 60 Hz) ─── */
+  function formatHumQ(value) { return 'Q ' + Math.round(Number(value)); }
+  function renderHumFilter(target, values, getNodes) {
+    const panel = document.querySelector(`[data-hum-target="${target}"]`); if (!panel) return;
+    panel.classList.toggle('disabled', !values.enabled);
+    panel.innerHTML = `<div class="pro-hum-header"><div class="pro-hum-heading"><div><div class="pro-hum-title">Filtro Notch anti-zumbido</div><div class="pro-hum-subtitle">Elimina a la vez el zumbido de 50 Hz y 60 Hz (y sus armónicos), en silencios y con música/voz</div></div></div><div class="pro-hum-actions"><button class="pro-hum-btn pro-hum-toggle${values.enabled ? ' active' : ''}" type="button" aria-pressed="${values.enabled}">${values.enabled ? 'Desactivar' : 'Activar'}</button></div></div><div class="pro-hum-grid"><div class="pro-hum-control"><div class="pro-hum-control-top"><span class="pro-hum-label">Precisión (Q)</span><span class="pro-hum-value">${formatHumQ(values.q)}</span></div><input type="range" min="2" max="60" step="1" value="${values.q}" aria-label="Precisión del filtro anti-zumbido"></div></div>`;
+    const toggle = panel.querySelector('.pro-hum-toggle'), slider = panel.querySelector('input[type="range"]'), readout = panel.querySelector('.pro-hum-value');
+    updateRangeFill(slider);
+    toggle.addEventListener('click', () => {
+      values.enabled = !values.enabled;
+      renderHumFilter(target, values, getNodes); applyHumState(values, getNodes());
+    });
+    slider.addEventListener('input', () => { const v = Number(slider.value); values.q = v; readout.textContent = formatHumQ(v); updateRangeFill(slider); applyHumState(values, getNodes()); });
+  }
+  renderHumFilter('show', humValues, () => humChain);
+
+  let eqToastTimer = null;
+  function showEqToast(message) {
+    if (!eqSaveToast) return;
+    eqSaveToast.textContent = message;
+    eqSaveToast.classList.add('show');
+    if (eqToastTimer) clearTimeout(eqToastTimer);
+    eqToastTimer = setTimeout(() => { eqSaveToast.classList.remove('show'); }, 2200);
+  }
+
+  // Aplica al ecualizador la configuración personalizada guardada para una
+  // canción (si existe) y selecciona el preset "Personalizar" automáticamente.
+  function applyCustomEqForSong(song) {
+    if (!song || !customEqMap.has(song.id)) return false;
+    const saved = customEqMap.get(song.id);
+    eqValues = Array.isArray(saved.values) && saved.values.length === 11 ? [...saved.values] : [0, ...EQ_PRESETS.flat];
+    eqBypassed = !!saved.bypassed;
+    eqPreset.value = 'custom';
+    eqBypass.classList.toggle('active', eqBypassed);
+    eqBypass.setAttribute('aria-pressed', String(eqBypassed));
+    renderEqualizer();
+    applyEqualizerValues();
+    return true;
+  }
+
+  eqPreset.addEventListener('change',()=>{
+    if (eqPreset.value === 'custom') {
+      // Si la canción actual ya tiene una ecualización personalizada guardada,
+      // recuperarla; si no, se mantienen las bandas actuales para que el
+      // usuario pueda empezar a personalizarlas libremente.
+      const song = currentIndex >= 0 ? songs[currentIndex] : null;
+      applyCustomEqForSong(song);
+      return;
+    }
+    eqValues=[0,...(EQ_PRESETS[eqPreset.value]||EQ_PRESETS.flat)];renderEqualizer();applyEqualizerValues();
+  });
   eqReset.addEventListener('click',()=>{eqPreset.value='flat';eqValues=[0,...EQ_PRESETS.flat];renderEqualizer();applyEqualizerValues();});
   eqBypass.addEventListener('click',()=>{eqBypassed=!eqBypassed;eqBypass.classList.toggle('active',eqBypassed);eqBypass.setAttribute('aria-pressed',String(eqBypassed));applyEqualizerValues();});
+  eqSaveCustom.addEventListener('click',()=>{
+    const song = currentIndex >= 0 ? songs[currentIndex] : null;
+    if (!song) { showEqToast('Selecciona una canción primero'); return; }
+    const record = { songId: song.id, values: [...eqValues], bypassed: eqBypassed };
+    customEqMap.set(song.id, { values: record.values, bypassed: record.bypassed });
+    dbPutCustomEq(record);
+    eqPreset.value = 'custom';
+    showEqToast('Ecualización personalizada guardada');
+  });
   renderEqualizer();
 
   function renderSetlist() {
@@ -1071,6 +1508,12 @@
     createAudio(song.url);
     nowPlayingTitle.textContent = song.name;
 
+    // Si esta canción tiene una ecualización personalizada guardada,
+    // recuperarla automáticamente (bandas, preamplificador y bypass) y
+    // seleccionar el preset "Personalizar". Si no existe, se conserva el
+    // preset/EQ actualmente activo sin cambios.
+    applyCustomEqForSong(song);
+
     // La onda comienza a cargarse inmediatamente al seleccionar la canción,
     // sin esperar a que arranque la reproducción.
     loadWaveformForSong(song);
@@ -1093,6 +1536,7 @@
     const song = songs[index];
     createAudio(song.url);
     nowPlayingTitle.textContent = song.name;
+    applyCustomEqForSong(song);
     loadWaveformForSong(song);
 
     audio.play().then(() => {
@@ -1208,6 +1652,10 @@
     }
     URL.revokeObjectURL(songs[index].url);
     dbDelete(songs[index].id);
+    if (customEqMap.has(songs[index].id)) {
+      customEqMap.delete(songs[index].id);
+      dbDeleteCustomEq(songs[index].id);
+    }
     songs.splice(index, 1);
     renderSetlist();
     persistOrder();
@@ -1247,7 +1695,10 @@
   // Al abrir la página, recupera el setlist guardado (sin autoreproducir,
   // porque los navegadores bloquean el audio automático sin interacción).
   async function loadSavedSetlist() {
-    const records = await dbGetAll();
+    const [records, eqRecords] = await Promise.all([dbGetAll(), dbGetAllCustomEq()]);
+    (eqRecords || []).forEach(rec => {
+      customEqMap.set(rec.songId, { values: rec.values, bypassed: !!rec.bypassed });
+    });
     if (!records || records.length === 0) return;
     records.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     records.forEach(rec => {
@@ -1320,6 +1771,8 @@
     nowPlayingTitle.textContent = '—';
     renderSetlist();
     dbClear();
+    customEqMap.clear();
+    dbClearCustomEq();
   });
 
   // Keyboard shortcuts
