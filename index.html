@@ -1903,6 +1903,17 @@
             </div>
           </div>
 
+          <!-- Grabar pista 1 y pista 2 al mismo tiempo -->
+          <div style="display:flex; gap:8px; margin: 2px 0;">
+            <button class="btn btn-main" id="dual12-record" type="button" style="flex:1;" title="Graba la pista 1 y la pista 2 al mismo tiempo, ambas empiezan juntas tras la cuenta de entrada">
+              <svg class="icon" id="dual12-rec-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle></svg>
+              <span id="dual12-rec-label">Grabar pista 1 y pista 2</span>
+            </button>
+            <button class="btn btn-secondary" id="dual12-stop" type="button" style="flex:1;" disabled title="Detiene la grabacion simultanea de la pista 1 y la pista 2">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12"></rect></svg>
+              <span>Detener</span>
+            </button>
+          </div>
 
           <!-- Pista 2 -->
           <div class="track-card">
@@ -5561,7 +5572,7 @@ trackIds.forEach(id => setupDropzone(tracksEls[id].viewport, tracksEls[id].dropz
 function updateMixButton() {
   const e = tracksEls.mix;
   if (!e || !e.mixButton) return;
-  e.mixButton.disabled = tracksWithAudio().length === 0 || !!state.multiTrackRecording;
+  e.mixButton.disabled = tracksWithAudio().length === 0 || !!state.multiTrackRecording || !!state.dualRecordSimple;
 }
 
 /* Habilita/deshabilita los botones "Reproducir pista X y grabar pista Y":
@@ -5583,6 +5594,7 @@ function updateComboButtons() {
     btn2.classList.toggle("active", runningHere);
   }
   updateMixRecordButton();
+  updateDual12Buttons();
 }
 
 /* Boton "Reproducir pista 3, grabar pista 1 y pista 2": necesita que la
@@ -5735,6 +5747,122 @@ async function stopDualTrackRecording() {
   updateMixRecordButton();
 }
 
+/* ─── GRABAR PISTA 1 Y PISTA 2 AL MISMO TIEMPO (sin reproducir pista 3) ───
+   Reutiliza el mismo mecanismo de grabacion simultanea por AudioWorklet que
+   startDualTrackRecording/stopDualTrackRecording, pero sin exigir audio en
+   la pista 3 ni reproducirla: solo graba la pista 1 y la pista 2 a la vez. */
+function updateDual12Buttons() {
+  const recBtn = document.getElementById("dual12-record");
+  const stopBtn = document.getElementById("dual12-stop");
+  if (!recBtn || !stopBtn) return;
+  const runningHere = !!state.dualRecordSimple || (state.countInActive && state.activeTarget === "dual12");
+  const busyElsewhere = (state.countInActive || state.isRecording || isAnyTrackRecording() || !!state.multiTrackRecording) && !runningHere;
+  recBtn.disabled = runningHere || busyElsewhere;
+  stopBtn.disabled = !runningHere;
+}
+
+async function startTrack1AndTrack2Recording() {
+  if (state.countInActive || state.isRecording || isAnyTrackRecording() || state.multiTrackRecording) return;
+  if (!(await initAudio())) return;
+  const workletOk = await ensurePCMWorklet();
+  if (!workletOk) { showMicError("La grabacion simultanea necesita AudioWorklet. Usa Chrome/Edge actualizado para esta funcion."); return; }
+
+  const micValues = DUAL_REC_TRACK_IDS.map(id => tracksEls[id].micSelect ? tracksEls[id].micSelect.value : "");
+  const streamCache = new Map(); // mismo dispositivo -> mismo stream, sin pedirlo dos veces
+  const streams = [];
+  try {
+    for (const mic of micValues) {
+      if (streamCache.has(mic)) { streams.push(streamCache.get(mic)); continue; }
+      const s = await getMic(mic);
+      streamCache.set(mic, s);
+      streams.push(s);
+    }
+  } catch (err) {
+    streams.forEach(s => s.getTracks().forEach(t => t.stop()));
+    showMicError("No se pudo acceder a una de las entradas para grabar las pistas 1 y 2.");
+    return;
+  }
+
+  hideMicError();
+  DUAL_REC_TRACK_IDS.forEach(id => stopTrackPlayback(id));
+  stopMetronome(false);
+
+  const routings = DUAL_REC_TRACK_IDS.map((id, i) => prepareInputRouting(streams[i], tracksEls[id].channelSelect));
+
+  // Filtro anti-zumbido en vivo, independiente para cada entrada.
+  const humNodes = DUAL_REC_TRACK_IDS.map((id, i) => {
+    const hn = createHumChain(state.audioCtx, state.tracks[id].humValues);
+    routings[i].connectTo(hn.input);
+    return hn;
+  });
+
+  // Cada pista tiene su propio analizador para dibujar su forma de onda en
+  // vivo directamente sobre su propio canvas mientras se graba.
+  DUAL_REC_TRACK_IDS.forEach((id, i) => {
+    const analyser = state.audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    humNodes[i].output.connect(analyser);
+    state.tracks[id].analyser = analyser;
+  });
+
+  const nodes = DUAL_REC_TRACK_IDS.map(() => new AudioWorkletNode(state.audioCtx, PCM_WORKLET_NAME));
+  const silentGain = state.audioCtx.createGain(); silentGain.gain.value = 0;
+  nodes.forEach(n => n.connect(silentGain));
+  silentGain.connect(state.audioCtx.destination);
+
+  const chunksById = {};
+  DUAL_REC_TRACK_IDS.forEach((id, i) => {
+    const chunks = [];
+    chunksById[id] = chunks;
+    nodes[i].port.onmessage = ev => { if (ev.data instanceof Float32Array) chunks.push(ev.data); };
+  });
+
+  state.dualRecordSimple = { streams: [...new Set(streams)], routings, humNodes, nodes, silentGain, chunksById };
+  state.activeTarget = "dual12";
+  DUAL_REC_TRACK_IDS.forEach(id => setTrackStatus(id, "countin"));
+  updateDual12Buttons();
+
+  startCountIn(() => {
+    if (!state.dualRecordSimple) return;
+    humNodes.forEach((hn, i) => hn.output.connect(nodes[i]));
+    DUAL_REC_TRACK_IDS.forEach(id => {
+      state.tracks[id].isRecording = true;
+      setTrackStatus(id, "recording");
+      startTrackLiveWaveform(id);
+    });
+    if (state.metroOn) startMetronome();
+    updateDual12Buttons();
+  });
+}
+
+async function stopTrack1AndTrack2Recording() {
+  if (state.countInActive && state.activeTarget === "dual12") {
+    cancelCountIn();
+    DUAL_REC_TRACK_IDS.forEach(id => setTrackStatus(id, state.tracks[id].buffer ? "ready" : "empty"));
+    state.dualRecordSimple = null;
+    state.activeTarget = null;
+    updateDual12Buttons();
+    return;
+  }
+  const rec = state.dualRecordSimple;
+  if (!rec) return;
+  DUAL_REC_TRACK_IDS.forEach(id => { state.tracks[id].isRecording = false; cancelAnimationFrame(state.tracks[id].liveRAF); });
+  rec.humNodes.forEach((hn, i) => { try { hn.output.disconnect(rec.nodes[i]); } catch (e) {} });
+  await Promise.all(rec.nodes.map(n => waitForWorkletFlush(n)));
+  try { rec.nodes.forEach(n => n.disconnect()); rec.silentGain.disconnect(); } catch (e) {}
+  rec.humNodes.forEach(hn => disconnectHumChain(hn));
+  rec.routings.forEach(r => { try { r.inputSource.disconnect(); } catch (e) {} });
+  rec.streams.forEach(stream => stream.getTracks().forEach(t => t.stop()));
+  state.dualRecordSimple = null;
+  state.activeTarget = null;
+  DUAL_REC_TRACK_IDS.forEach(id => { state.tracks[id].analyser = null; });
+  DUAL_REC_TRACK_IDS.forEach(id => floatChunksToTrackBuffer(id, rec.chunksById[id]));
+  updateMixButton();
+  updateMixRecordButton();
+  updateComboButtons();
+  updateDual12Buttons();
+}
+
 function tracksWithAudio() {
   return sourceTrackIds.filter(id => !!state.tracks[id].buffer);
 }
@@ -5776,6 +5904,9 @@ async function createMixFromTracks() {
 
 /* ─── EVENT LISTENERS ─── */
 els.btnRecord.addEventListener("click", async () => {
+  if (state.countInActive && state.activeTarget === "dual12") {
+    await stopTrack1AndTrack2Recording(); return;
+  }
   if (state.countInActive && state.activeTarget && state.activeTarget !== "main") {
     await stopTrackRecording(state.activeTarget); return;
   }
@@ -5844,6 +5975,12 @@ document.getElementById("track1-play-and-record")?.addEventListener("click", () 
 document.getElementById("track2-play-and-record")?.addEventListener("click", () => {
   togglePlayAndRecordCombo("track2", "track1");
 });
+
+/* Boton "Grabar pista 1 y pista 2" / "Detener": graban ambas pistas a la
+   vez desde el microfono, sin reproducir ni exigir audio en la pista 3. */
+document.getElementById("dual12-record")?.addEventListener("click", () => startTrack1AndTrack2Recording());
+document.getElementById("dual12-stop")?.addEventListener("click", () => stopTrack1AndTrack2Recording());
+
 updateComboButtons();
 
 /* ─── PLAY TODO (loop + pista al mismo tiempo, sincronizados por audioCtx.currentTime) ─── */
@@ -6021,6 +6158,9 @@ document.addEventListener("keydown", async ev => {
   if (ev.target instanceof HTMLInputElement || ev.target instanceof HTMLButtonElement) return;
   if (ev.code === "Space") {
     ev.preventDefault();
+    if (state.countInActive && state.activeTarget === "dual12") {
+      await stopTrack1AndTrack2Recording(); return;
+    }
     if (state.countInActive && state.activeTarget && state.activeTarget !== "main") {
       await stopTrackRecording(state.activeTarget); return;
     }
@@ -6080,6 +6220,10 @@ function normalizeVoicePhrase(txt) {
 async function stopWhateverIsRecording() {
   if (state.multiTrackRecording || (state.countInActive && state.activeTarget === "mix")) {
     await stopDualTrackRecording();
+    return true;
+  }
+  if (state.dualRecordSimple || (state.countInActive && state.activeTarget === "dual12")) {
+    await stopTrack1AndTrack2Recording();
     return true;
   }
   if (state.countInActive && state.activeTarget && state.activeTarget !== "main") {
