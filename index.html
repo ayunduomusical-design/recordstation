@@ -2369,6 +2369,20 @@
 
 
       <!-- Pistas de grabacion (2), cada una con su propio microfono de entrada -->
+      
+      <section class="module bottom-card" aria-label="Nivel de entrada y salida">
+        <div class="vu-wrap" aria-label="Nivel de entrada">
+          <span class="vu-label">Nivel de entrada / salida</span>
+          <div class="vu-row">
+            <div class="vu-meter" id="vu-meter">
+              <div class="vu-fill" id="vu-fill"></div>
+            </div>
+            <span class="clip-light" id="clip-light" title="Clipping (la señal toco 0dB)">CLIP</span>
+            <span class="vu-db" id="vu-db" aria-live="off">-60.0 dBFS</span>
+          </div>
+        </div>
+      </section>
+
       <section aria-label="Pistas de grabacion">
         <span class="section-label" style="display:block;margin-bottom:10px;">Pistas de grabacion</span>
         <div class="tracks-stack" id="tracks-stack" style="display:grid;gap:14px;">
@@ -2871,26 +2885,7 @@
     </div><!-- /deck -->
 
     <!-- BOTTOM PANEL: Nivel de entrada/salida · Acciones de sesión · Proyectos guardados -->
-    <section class="bottom-panel" aria-label="Panel inferior">
-
-      <section class="module bottom-card" aria-label="Nivel de entrada y salida">
-        <div class="vu-wrap" aria-label="Nivel de entrada">
-          <span class="vu-label">Nivel de entrada / salida</span>
-          <div class="vu-row">
-            <div class="vu-meter" id="vu-meter">
-              <div class="vu-fill" id="vu-fill"></div>
-            </div>
-            <span class="clip-light" id="clip-light" title="Clipping (la señal toco 0dB)">CLIP</span>
-            <span class="vu-db" id="vu-db" aria-live="off">-60.0 dBFS</span>
-          </div>
-        </div>
-      </section>
-
-      
-
-      
-
-    </section><!-- /bottom-panel -->
+    <!-- /bottom-panel -->
 
     <!-- SIDE PANEL (resto de módulos: se conserva intacto para no romper referencias de JS,
          pero se oculta visualmente vía CSS — ver regla .side-panel{display:none} ) -->
