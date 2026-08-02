@@ -2390,6 +2390,7 @@
                 <span class="track-mic-label">Microfono</span>
                 <select class="input-select" id="track1-mic-device" aria-label="Microfono de la Pista 1">
                   <option value="">Entrada predeterminada</option>
+                  <option value="none">Ninguno</option>
                 </select>
               </div>
               <div class="track-mic-row">
@@ -2516,6 +2517,7 @@
                 <span class="track-mic-label">Microfono</span>
                 <select class="input-select" id="track2-mic-device" aria-label="Microfono de la Pista 2">
                   <option value="">Entrada predeterminada</option>
+                  <option value="none">Ninguno</option>
                 </select>
               </div>
               <div class="track-mic-row">
@@ -2788,6 +2790,7 @@
             <span class="track-mic-label">Microfono</span>
             <select class="input-select" id="input-device" aria-label="Dispositivo de entrada del Loop">
               <option value="">Entrada predeterminada</option>
+              <option value="none">Ninguno</option>
             </select>
           </div>
           <div class="track-mic-row">
@@ -4137,11 +4140,28 @@ function isAnyTrackPlaying() {
 }
 
 /* ─── MICRÓFONO / ENTRADA DE AUDIO ─── */
+// Genera un MediaStream de audio silencioso (sin pedir permiso de microfono
+// ni abrir ninguna entrada real). Se usa cuando el MICROFONO de una pista o
+// del loop esta puesto en "Ninguno".
+function getSilentStream() {
+  if (state.audioCtx && state.audioCtx.createMediaStreamDestination) {
+    return state.audioCtx.createMediaStreamDestination().stream;
+  }
+  return new MediaStream();
+}
+
 // Intenta obtener el audio sin bloquear en file:// usando constraints permisivos.
 // deviceId: si se pasa explicitamente (por ejemplo, el microfono elegido para
 // una pista en particular), se usa ese; si no, se usa el selector global (loop).
 async function getMic(deviceId) {
   const chosenId = deviceId != null ? deviceId : (els.inputDevice ? els.inputDevice.value : "");
+  if (chosenId === "none") {
+    // "Ninguno": esta pista/loop no debe recibir señal ni iniciar captura
+    // real de audio. Devolvemos un stream silencioso para que el resto del
+    // ruteo/grabacion (identico para todas las entradas) siga funcionando
+    // sin cambios, pero sin que llegue ninguna señal real desde el microfono.
+    return getSilentStream();
+  }
   const baseAudioConstraints = {
     echoCancellation: false,
     noiseSuppression: false,
@@ -4187,6 +4207,48 @@ function allDeviceSelects() {
   return list;
 }
 
+// Devuelve el selector de CANAL que corresponde a un selector de MICROFONO
+// dado (cada pista, y el loop, tienen su propio par microfono/canal
+// totalmente independiente de los demas).
+function getChannelSelectForMic(micEl) {
+  if (micEl === els.inputDevice) return els.inputChannel;
+  for (const id of trackIds) {
+    const t = tracksEls[id];
+    if (t && t.micSelect === micEl) return t.channelSelect;
+  }
+  return null;
+}
+
+// Cuando el MICROFONO de una pista (o el del loop) esta en "Ninguno", su
+// selector de CANAL correspondiente se deshabilita; esto no afecta a los
+// selectores de canal de las demas pistas.
+function syncMicNoneChannelState(micEl) {
+  const channelEl = getChannelSelectForMic(micEl);
+  if (!channelEl) return;
+  channelEl.disabled = micEl.value === "none";
+}
+
+// Devuelve el boton que graba que corresponde a un selector de MICROFONO
+// dado (cada pista, y el loop, tienen su propio par microfono/boton-grabar
+// totalmente independiente de los demas).
+function getRecordButtonForMic(micEl) {
+  if (micEl === els.inputDevice) return els.btnRecord;
+  for (const id of trackIds) {
+    const t = tracksEls[id];
+    if (t && t.micSelect === micEl) return t.record;
+  }
+  return null;
+}
+
+// Cuando el MICROFONO de una pista (o el del loop) esta en "Ninguno", su
+// boton de GRABAR correspondiente se deshabilita; esto no afecta al boton
+// de grabar de las demas pistas ni al del loop.
+function syncMicNoneRecordState(micEl) {
+  const recordBtn = getRecordButtonForMic(micEl);
+  if (!recordBtn) return;
+  recordBtn.disabled = micEl.value === "none";
+}
+
 // Llena todos los selectores de entrada (loop + cada pista) con los
 // dispositivos de audio disponibles, preservando la preferencia guardada
 // de cada uno por separado.
@@ -4207,6 +4269,11 @@ async function populateInputDevices() {
       defaultOpt.textContent = "Entrada predeterminada";
       el.appendChild(defaultOpt);
 
+      const noneOpt = document.createElement("option");
+      noneOpt.value = "none";
+      noneOpt.textContent = "Ninguno";
+      el.appendChild(noneOpt);
+
       inputs.forEach((d, i) => {
         const opt = document.createElement("option");
         opt.value = d.deviceId;
@@ -4216,8 +4283,12 @@ async function populateInputDevices() {
 
       let savedId = null;
       try { savedId = localStorage.getItem(key); } catch (e) {}
-      if (savedId && inputs.some(d => d.deviceId === savedId)) {
+      if (savedId === "none") {
+        el.value = "none";
+      } else if (savedId && inputs.some(d => d.deviceId === savedId)) {
         el.value = savedId;
+      } else if (previousValue === "none") {
+        el.value = "none";
       } else if (previousValue && inputs.some(d => d.deviceId === previousValue)) {
         el.value = previousValue;
       } else if (auto) {
@@ -4228,6 +4299,8 @@ async function populateInputDevices() {
           try { localStorage.setItem(key, autoDev.deviceId); } catch (e) {}
         }
       }
+      syncMicNoneChannelState(el);
+      syncMicNoneRecordState(el);
     });
   } catch (e) {
     // enumerateDevices puede fallar sin permiso previo; se reintenta luego de getUserMedia
@@ -4237,11 +4310,36 @@ async function populateInputDevices() {
 allDeviceSelects().forEach(({ el, key }) => {
   el.addEventListener("change", () => {
     try { localStorage.setItem(key, el.value); } catch (e) {}
+    syncMicNoneChannelState(el);
+    syncMicNoneRecordState(el);
   });
+  syncMicNoneChannelState(el);
+  syncMicNoneRecordState(el);
 });
 populateInputDevices();
 if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
   navigator.mediaDevices.addEventListener("devicechange", populateInputDevices);
+}
+
+// Los navegadores solo revelan los nombres/lista completa de microfonos
+// despues de que el sitio haya obtenido permiso de audio al menos una vez
+// (antes de eso, enumerateDevices() devuelve una entrada generica sin
+// etiquetas). Para que los selectores "MICROFONO" de cada pista muestren
+// siempre todos los dispositivos reales sin obligar al usuario a grabar
+// primero, se solicita el permiso una unica vez al cargar la pagina; el
+// stream obtenido se cierra de inmediato (no se usa para grabar ni se
+// reproduce nada).
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    .then(tempStream => {
+      tempStream.getTracks().forEach(t => t.stop());
+      populateInputDevices();
+    })
+    .catch(() => {
+      // Si el usuario deniega el permiso o no hay microfono disponible, los
+      // selectores igual funcionan mostrando "Entrada predeterminada" y
+      // "Ninguno".
+    });
 }
 
 if (els.inputChannel) {
@@ -4599,9 +4697,18 @@ async function stopRecording() {
 /* ─── TRACK RECORDING (single track) ─── */
 async function startTrackRecording(id, onStarted) {
   if (state.countInActive || state.isRecording || isAnyTrackRecording()) return;
-  if (!(await initAudio())) return;
 
   const trackMicId = tracksEls[id] && tracksEls[id].micSelect ? tracksEls[id].micSelect.value : "";
+  if (trackMicId === "none") {
+    // "Ninguno": esta pista no tiene fuente de audio asignada. No se debe
+    // pedir MediaStream, ni crear MediaRecorder/worklet, ni generar ninguna
+    // forma de onda ni clip silencioso. La pista permanece exactamente
+    // igual que antes (estado "Sin grabacion").
+    return;
+  }
+
+  if (!(await initAudio())) return;
+
   try {
     state.mediaStream = await getMic(trackMicId);
   } catch (err) {
@@ -5676,7 +5783,7 @@ function setStatus(mode) {
     els.statusText.textContent = "Reproduciendo";
     els.recLabel.textContent = "Grabar";
     els.playLabel.textContent = "Detener";
-    els.btnRecord.disabled = false;
+    els.btnRecord.disabled = els.inputDevice && els.inputDevice.value === "none";
     els.waveHint.textContent = "Loop activo.";
     if (typeof updateComboButtons === "function") updateComboButtons();
     return;
@@ -5693,7 +5800,7 @@ function setStatus(mode) {
   }
   els.recLabel.textContent = "Grabar";
   els.playLabel.textContent = "Reproducir";
-  els.btnRecord.disabled = false;
+  els.btnRecord.disabled = els.inputDevice && els.inputDevice.value === "none";
   if (typeof updatePlayTodoBtn === "function") updatePlayTodoBtn();
   if (typeof updateComboButtons === "function") updateComboButtons();
 }
@@ -6368,10 +6475,16 @@ async function startDualTrackRecording() {
   if (!workletOk) { showMicError("La grabacion simultanea necesita AudioWorklet. Usa Chrome/Edge actualizado para esta funcion."); return; }
 
   const micValues = DUAL_REC_TRACK_IDS.map(id => tracksEls[id].micSelect ? tracksEls[id].micSelect.value : "");
+  // "Ninguno" significa ausencia total de fuente de audio para esa pista: no
+  // debe pedirsele stream, ni grabarla, ni dibujar su forma de onda. La
+  // reproduccion de la pista 3 sigue igual sin importar cuantas pistas (0, 1
+  // o 2) tengan un microfono valido seleccionado.
+  const activeIds = DUAL_REC_TRACK_IDS.filter((id, i) => micValues[i] !== "none");
   const streamCache = new Map(); // mismo dispositivo -> mismo stream, sin pedirlo dos veces
   const streams = [];
   try {
-    for (const mic of micValues) {
+    for (const id of activeIds) {
+      const mic = tracksEls[id].micSelect.value;
       if (streamCache.has(mic)) { streams.push(streamCache.get(mic)); continue; }
       const s = await getMic(mic);
       streamCache.set(mic, s);
@@ -6384,7 +6497,7 @@ async function startDualTrackRecording() {
   }
 
   hideMicError();
-  DUAL_REC_TRACK_IDS.forEach(id => stopTrackPlayback(id));
+  activeIds.forEach(id => stopTrackPlayback(id));
   stopTrackPlayback("track3");
   stopTrackPlayback("mix");
   stopMetronome(false);
@@ -6394,36 +6507,51 @@ async function startDualTrackRecording() {
   track3.seek = 0;
   updateSeekUI("track3");
 
-  const routings = DUAL_REC_TRACK_IDS.map((id, i) => prepareInputRouting(streams[i], tracksEls[id].channelSelect));
+  const routings = activeIds.map((id, i) => prepareInputRouting(streams[i], tracksEls[id].channelSelect));
 
   // Filtro anti-zumbido en vivo, independiente para cada entrada (cada
   // pista puede tener su propio Q/estado), insertado antes del analizador
   // y de los capturadores PCM de cada una.
-  const humNodes = DUAL_REC_TRACK_IDS.map((id, i) => {
+  const humNodes = activeIds.map((id, i) => {
     const hn = createHumChain(state.audioCtx, state.tracks[id].humValues);
     routings[i].connectTo(hn.input);
     return hn;
   });
 
-  const analyser = state.audioCtx.createAnalyser(); analyser.fftSize = 512;
-  humNodes[0].output.connect(analyser);
-  state.tracks.mix.analyser = analyser;
+  // Si ninguna pista tiene microfono valido no hay señal de entrada que
+  // analizar para el VU/forma de onda en vivo de "mix".
+  if (humNodes.length) {
+    const analyser = state.audioCtx.createAnalyser(); analyser.fftSize = 512;
+    humNodes[0].output.connect(analyser);
+    state.tracks.mix.analyser = analyser;
+  }
 
-  const nodes = DUAL_REC_TRACK_IDS.map(() => new AudioWorkletNode(state.audioCtx, PCM_WORKLET_NAME));
+  // Analizador propio para cada pista (Pista 1 y Pista 2), independiente del
+  // de "mix", para que el VU meter "Nivel de entrada / salida" de cada una
+  // funcione correctamente sin importar si la otra pista tiene el Microfono
+  // en "Ninguno".
+  activeIds.forEach((id, i) => {
+    const trackAnalyser = state.audioCtx.createAnalyser();
+    trackAnalyser.fftSize = 512;
+    humNodes[i].output.connect(trackAnalyser);
+    state.tracks[id].analyser = trackAnalyser;
+  });
+
+  const nodes = activeIds.map(() => new AudioWorkletNode(state.audioCtx, PCM_WORKLET_NAME));
   const silentGain = state.audioCtx.createGain(); silentGain.gain.value = 0;
   nodes.forEach(n => n.connect(silentGain));
   silentGain.connect(state.audioCtx.destination);
 
   const chunksById = {};
-  DUAL_REC_TRACK_IDS.forEach((id, i) => {
+  activeIds.forEach((id, i) => {
     const chunks = [];
     chunksById[id] = chunks;
     nodes[i].port.onmessage = ev => { if (ev.data instanceof Float32Array) chunks.push(ev.data); };
   });
 
-  state.multiTrackRecording = { streams: [...new Set(streams)], routings, humNodes, nodes, silentGain, chunksById };
+  state.multiTrackRecording = { streams: [...new Set(streams)], routings, humNodes, nodes, silentGain, chunksById, activeIds };
   state.activeTarget = "mix";
-  DUAL_REC_TRACK_IDS.forEach(id => setTrackStatus(id, "countin"));
+  activeIds.forEach(id => setTrackStatus(id, "countin"));
   setTrackStatus("mix", "countin");
   setTrackStatus("track3", "countin");
 
@@ -6435,7 +6563,7 @@ async function startDualTrackRecording() {
     // pequeño retraso entre ellas.
     const syncTime = state.audioCtx.currentTime;
     humNodes.forEach((hn, i) => hn.output.connect(nodes[i]));
-    DUAL_REC_TRACK_IDS.forEach(id => { state.tracks[id].isRecording = true; setTrackStatus(id, "recording"); });
+    activeIds.forEach(id => { state.tracks[id].isRecording = true; setTrackStatus(id, "recording"); });
     state.tracks.mix.isRecording = true;
     setTrackStatus("mix", "recording");
     startTrackLiveWaveform("mix");
@@ -6452,7 +6580,7 @@ async function stopDualTrackRecording() {
   }
   const rec = state.multiTrackRecording;
   if (!rec) return;
-  DUAL_REC_TRACK_IDS.forEach(id => { state.tracks[id].isRecording = false; });
+  rec.activeIds.forEach(id => { state.tracks[id].isRecording = false; });
   state.tracks.mix.isRecording = false;
   cancelAnimationFrame(state.tracks.mix.liveRAF);
   rec.humNodes.forEach((hn, i) => { try { hn.output.disconnect(rec.nodes[i]); } catch (e) {} });
@@ -6464,8 +6592,9 @@ async function stopDualTrackRecording() {
   state.multiTrackRecording = null;
   state.activeTarget = null;
   state.tracks.mix.analyser = null;
+  rec.activeIds.forEach(id => { state.tracks[id].analyser = null; });
   stopTrackPlayback("track3");
-  DUAL_REC_TRACK_IDS.forEach(id => floatChunksToTrackBuffer(id, rec.chunksById[id]));
+  rec.activeIds.forEach(id => floatChunksToTrackBuffer(id, rec.chunksById[id]));
   setTrackStatus("mix", state.tracks.mix.buffer ? "ready" : "empty");
   updateMixButton();
   updateMixRecordButton();
@@ -6487,15 +6616,28 @@ function updateDual12Buttons() {
 
 async function startTrack1AndTrack2Recording() {
   if (state.countInActive || state.isRecording || isAnyTrackRecording() || state.multiTrackRecording) return;
+
+  const micValues = DUAL_REC_TRACK_IDS.map(id => tracksEls[id].micSelect ? tracksEls[id].micSelect.value : "");
+  // "Ninguno" significa ausencia total de fuente de audio para esa pista:
+  // no debe pedirsele stream, ni grabarla, ni dibujar su forma de onda. Solo
+  // se procesan aqui las pistas (1 y/o 2) que sí tengan un microfono elegido.
+  const activeIds = DUAL_REC_TRACK_IDS.filter((id, i) => micValues[i] !== "none");
+  if (!activeIds.length) {
+    // Ambas en "Ninguno": no debe iniciarse ninguna grabacion ni crearse
+    // ningun stream. Ambas pistas permanecen en "Sin grabacion".
+    showMicError("Selecciona un microfono en la Pista 1 y/o la Pista 2 para poder grabar.");
+    return;
+  }
+
   if (!(await initAudio())) return;
   const workletOk = await ensurePCMWorklet();
   if (!workletOk) { showMicError("La grabacion simultanea necesita AudioWorklet. Usa Chrome/Edge actualizado para esta funcion."); return; }
 
-  const micValues = DUAL_REC_TRACK_IDS.map(id => tracksEls[id].micSelect ? tracksEls[id].micSelect.value : "");
   const streamCache = new Map(); // mismo dispositivo -> mismo stream, sin pedirlo dos veces
   const streams = [];
   try {
-    for (const mic of micValues) {
+    for (const id of activeIds) {
+      const mic = tracksEls[id].micSelect.value;
       if (streamCache.has(mic)) { streams.push(streamCache.get(mic)); continue; }
       const s = await getMic(mic);
       streamCache.set(mic, s);
@@ -6508,13 +6650,13 @@ async function startTrack1AndTrack2Recording() {
   }
 
   hideMicError();
-  DUAL_REC_TRACK_IDS.forEach(id => stopTrackPlayback(id));
+  activeIds.forEach(id => stopTrackPlayback(id));
   stopMetronome(false);
 
-  const routings = DUAL_REC_TRACK_IDS.map((id, i) => prepareInputRouting(streams[i], tracksEls[id].channelSelect));
+  const routings = activeIds.map((id, i) => prepareInputRouting(streams[i], tracksEls[id].channelSelect));
 
   // Filtro anti-zumbido en vivo, independiente para cada entrada.
-  const humNodes = DUAL_REC_TRACK_IDS.map((id, i) => {
+  const humNodes = activeIds.map((id, i) => {
     const hn = createHumChain(state.audioCtx, state.tracks[id].humValues);
     routings[i].connectTo(hn.input);
     return hn;
@@ -6522,34 +6664,34 @@ async function startTrack1AndTrack2Recording() {
 
   // Cada pista tiene su propio analizador para dibujar su forma de onda en
   // vivo directamente sobre su propio canvas mientras se graba.
-  DUAL_REC_TRACK_IDS.forEach((id, i) => {
+  activeIds.forEach((id, i) => {
     const analyser = state.audioCtx.createAnalyser();
     analyser.fftSize = 512;
     humNodes[i].output.connect(analyser);
     state.tracks[id].analyser = analyser;
   });
 
-  const nodes = DUAL_REC_TRACK_IDS.map(() => new AudioWorkletNode(state.audioCtx, PCM_WORKLET_NAME));
+  const nodes = activeIds.map(() => new AudioWorkletNode(state.audioCtx, PCM_WORKLET_NAME));
   const silentGain = state.audioCtx.createGain(); silentGain.gain.value = 0;
   nodes.forEach(n => n.connect(silentGain));
   silentGain.connect(state.audioCtx.destination);
 
   const chunksById = {};
-  DUAL_REC_TRACK_IDS.forEach((id, i) => {
+  activeIds.forEach((id, i) => {
     const chunks = [];
     chunksById[id] = chunks;
     nodes[i].port.onmessage = ev => { if (ev.data instanceof Float32Array) chunks.push(ev.data); };
   });
 
-  state.dualRecordSimple = { streams: [...new Set(streams)], routings, humNodes, nodes, silentGain, chunksById };
+  state.dualRecordSimple = { streams: [...new Set(streams)], routings, humNodes, nodes, silentGain, chunksById, activeIds };
   state.activeTarget = "dual12";
-  DUAL_REC_TRACK_IDS.forEach(id => setTrackStatus(id, "countin"));
+  activeIds.forEach(id => setTrackStatus(id, "countin"));
   updateDual12Buttons();
 
   startCountIn(() => {
     if (!state.dualRecordSimple) return;
     humNodes.forEach((hn, i) => hn.output.connect(nodes[i]));
-    DUAL_REC_TRACK_IDS.forEach(id => {
+    activeIds.forEach(id => {
       state.tracks[id].isRecording = true;
       setTrackStatus(id, "recording");
       startTrackLiveWaveform(id);
@@ -6562,7 +6704,8 @@ async function startTrack1AndTrack2Recording() {
 async function stopTrack1AndTrack2Recording() {
   if (state.countInActive && state.activeTarget === "dual12") {
     cancelCountIn();
-    DUAL_REC_TRACK_IDS.forEach(id => setTrackStatus(id, state.tracks[id].buffer ? "ready" : "empty"));
+    const cancelledIds = (state.dualRecordSimple && state.dualRecordSimple.activeIds) || DUAL_REC_TRACK_IDS;
+    cancelledIds.forEach(id => setTrackStatus(id, state.tracks[id].buffer ? "ready" : "empty"));
     state.dualRecordSimple = null;
     state.activeTarget = null;
     updateDual12Buttons();
@@ -6570,7 +6713,8 @@ async function stopTrack1AndTrack2Recording() {
   }
   const rec = state.dualRecordSimple;
   if (!rec) return;
-  DUAL_REC_TRACK_IDS.forEach(id => { state.tracks[id].isRecording = false; cancelAnimationFrame(state.tracks[id].liveRAF); });
+  const activeIds = rec.activeIds || DUAL_REC_TRACK_IDS;
+  activeIds.forEach(id => { state.tracks[id].isRecording = false; cancelAnimationFrame(state.tracks[id].liveRAF); });
   rec.humNodes.forEach((hn, i) => { try { hn.output.disconnect(rec.nodes[i]); } catch (e) {} });
   await Promise.all(rec.nodes.map(n => waitForWorkletFlush(n)));
   try { rec.nodes.forEach(n => n.disconnect()); rec.silentGain.disconnect(); } catch (e) {}
@@ -6579,8 +6723,8 @@ async function stopTrack1AndTrack2Recording() {
   rec.streams.forEach(stream => stream.getTracks().forEach(t => t.stop()));
   state.dualRecordSimple = null;
   state.activeTarget = null;
-  DUAL_REC_TRACK_IDS.forEach(id => { state.tracks[id].analyser = null; });
-  DUAL_REC_TRACK_IDS.forEach(id => floatChunksToTrackBuffer(id, rec.chunksById[id]));
+  activeIds.forEach(id => { state.tracks[id].analyser = null; });
+  activeIds.forEach(id => floatChunksToTrackBuffer(id, rec.chunksById[id]));
   updateMixButton();
   updateMixRecordButton();
   updateComboButtons();
