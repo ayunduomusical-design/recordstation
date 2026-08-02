@@ -721,13 +721,13 @@
   }
 
   /* ── VU METER ── */
-  .vu-wrap { display: grid; gap: 6px; margin-top: 4px; }
+  .vu-wrap { display: grid; gap: 3px; margin-top: 2px; }
   .vu-label { color: var(--muted); font-size: 11px; }
   .vu-row { display: flex; align-items: center; gap: 8px; }
   .vu-meter {
     flex: 1;
     width: 100%;
-    height: 10px;
+    height: 6px;
     border-radius: 999px;
     background: var(--panel-2);
     border: 1px solid var(--line);
@@ -1269,6 +1269,10 @@
     padding: 0 13px 13px;
   }
 
+  /* Alinea el ancho del medidor "Nivel de entrada / salida" de la Pista 1
+     con el del panel "Ecualizador profesional — Pista 1" que tiene debajo. */
+  #tracks-stack .track-card .bottom-card { margin: 0 13px; }
+
   .eq-band {
     display: grid;
     gap: 1px;
@@ -1613,6 +1617,7 @@
     .track-wave-empty { font-size: 8px; }
     .track-zoom-row { padding: 0 5px 5px; }
     .track-eq-block { padding: 0 5px 5px; }
+    #tracks-stack .track-card .bottom-card { margin: 0 5px; }
 
     .play-todo-wrap { margin: 3px 0; }
     .play-todo-label { font-size: 7px; margin-bottom: 2px; }
@@ -1758,14 +1763,14 @@
       rgba(20,19,17,.94);
     box-shadow: 0 24px 64px rgba(0,0,0,.48);
     backdrop-filter: blur(20px);
-    padding: 26px clamp(20px, 3vw, 34px);
-    gap: 16px;
+    padding: 12px clamp(20px, 3vw, 34px);
+    gap: 8px;
   }
 
   .bottom-card:last-child,
   .bottom-card:first-child {
     border: 1px solid var(--line);
-    padding: 26px clamp(20px, 3vw, 34px);
+    padding: 12px clamp(20px, 3vw, 34px);
   }
 
   .bottom-panel .section-label {
@@ -1802,7 +1807,7 @@
     .bottom-panel { gap: 16px; }
     .bottom-card,
     .bottom-card:last-child,
-    .bottom-card:first-child { padding: 20px 18px; }
+    .bottom-card:first-child { padding: 9px 18px; }
   }
 
   @media (max-width: 640px) {
@@ -1845,6 +1850,7 @@
 
 /* Zoom, EQ, Gate, Hum ocupan ancho completo */
 #tracks-stack .track-card > .track-zoom-row,
+#tracks-stack .track-card > .bottom-card,
 #tracks-stack .track-card > .track-eq-block,
 #tracks-stack .track-card > .track-gate-block,
 #tracks-stack .track-card > .track-hum-block {
@@ -2369,19 +2375,6 @@
 
 
       <!-- Pistas de grabacion (2), cada una con su propio microfono de entrada -->
-      
-      <section class="module bottom-card" aria-label="Nivel de entrada y salida">
-        <div class="vu-wrap" aria-label="Nivel de entrada">
-          <span class="vu-label">Nivel de entrada / salida</span>
-          <div class="vu-row">
-            <div class="vu-meter" id="vu-meter">
-              <div class="vu-fill" id="vu-fill"></div>
-            </div>
-            <span class="clip-light" id="clip-light" title="Clipping (la señal toco 0dB)">CLIP</span>
-            <span class="vu-db" id="vu-db" aria-live="off">-60.0 dBFS</span>
-          </div>
-        </div>
-      </section>
 
       <section aria-label="Pistas de grabacion">
         <span class="section-label" style="display:block;margin-bottom:10px;">Pistas de grabacion</span>
@@ -2461,6 +2454,20 @@
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
               </button>
             </div>
+            <!-- Nivel de entrada / salida — exclusivo de Pista 1 -->
+            <section class="module bottom-card" aria-label="Nivel de entrada y salida de la Pista 1">
+              <div class="vu-wrap" aria-label="Nivel de entrada de la Pista 1">
+                <span class="vu-label">Nivel de entrada / salida</span>
+                <div class="vu-row">
+                  <div class="vu-meter" id="vu-meter">
+                    <div class="vu-fill" id="vu-fill"></div>
+                  </div>
+                  <span class="clip-light" id="clip-light" title="Clipping (la señal toco 0dB)">CLIP</span>
+                  <span class="vu-db" id="vu-db" aria-live="off">-60.0 dBFS</span>
+                </div>
+              </div>
+            </section>
+
             <!-- Ecualizador profesional — Pista 1 -->
             <div class="track-eq-block pro-eq-host">
               <div class="pro-eq-panel" data-eq-target="track1" data-eq-title="Pista 1"></div>
@@ -2573,6 +2580,20 @@
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.06-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"></path></svg>
               </button>
             </div>
+            <!-- Nivel de entrada / salida — exclusivo de Pista 2 -->
+            <section class="module bottom-card" aria-label="Nivel de entrada y salida de la Pista 2">
+              <div class="vu-wrap" aria-label="Nivel de entrada de la Pista 2">
+                <span class="vu-label">Nivel de entrada / salida</span>
+                <div class="vu-row">
+                  <div class="vu-meter" id="vu-meter-track2">
+                    <div class="vu-fill" id="vu-fill-track2"></div>
+                  </div>
+                  <span class="clip-light" id="clip-light-track2" title="Clipping (la señal toco 0dB)">CLIP</span>
+                  <span class="vu-db" id="vu-db-track2" aria-live="off">-60.0 dBFS</span>
+                </div>
+              </div>
+            </section>
+
             <!-- Ecualizador profesional — Pista 2 -->
             <div class="track-eq-block pro-eq-host">
               <div class="pro-eq-panel" data-eq-target="track2" data-eq-title="Pista 2"></div>
@@ -2829,6 +2850,20 @@
         </div>
         <div class="timeline" aria-hidden="true">
           <div id="playhead"></div>
+        </div>
+      </section>
+
+      <!-- Nivel de entrada / salida — exclusivo del Loop -->
+      <section class="module bottom-card" aria-label="Nivel de entrada y salida del Loop">
+        <div class="vu-wrap" aria-label="Nivel de entrada del Loop">
+          <span class="vu-label">Nivel de entrada / salida</span>
+          <div class="vu-row">
+            <div class="vu-meter" id="vu-meter-loop">
+              <div class="vu-fill" id="vu-fill-loop"></div>
+            </div>
+            <span class="clip-light" id="clip-light-loop" title="Clipping (la señal toco 0dB)">CLIP</span>
+            <span class="vu-db" id="vu-db-loop" aria-live="off">-60.0 dBFS</span>
+          </div>
         </div>
       </section>
 
@@ -3147,6 +3182,12 @@ const els = {
   vuFill:           document.getElementById("vu-fill"),
   clipLight:        document.getElementById("clip-light"),
   vuDb:             document.getElementById("vu-db"),
+  vuFillTrack2:     document.getElementById("vu-fill-track2"),
+  clipLightTrack2:  document.getElementById("clip-light-track2"),
+  vuDbTrack2:       document.getElementById("vu-db-track2"),
+  vuFillLoop:       document.getElementById("vu-fill-loop"),
+  clipLightLoop:    document.getElementById("clip-light-loop"),
+  vuDbLoop:         document.getElementById("vu-db-loop"),
   scopeCanvas:      document.getElementById("scope-canvas"),
   spectrumCanvas:   document.getElementById("spectrum-canvas"),
   channelStatus:    document.getElementById("channel-status"),
@@ -4319,14 +4360,19 @@ function startVUMeter() {
   const CLIP_THRESHOLD = 0.98; // ~ -0.18 dBFS: se considera clipping
   const CLIP_HOLD_MS = 1200;   // tiempo que se mantiene encendido el indicador
   let clipHoldUntil = 0;
+  let clipHoldUntilTrack2 = 0;
+  let clipHoldUntilLoop = 0;
   const scopeCtx = els.scopeCanvas ? els.scopeCanvas.getContext("2d") : null;
   const spectrumCtx = els.spectrumCanvas ? els.spectrumCanvas.getContext("2d") : null;
   function loop() {
     const stillActive = state.countInActive || state.isRecording || isAnyTrackRecording() || state.isPlaying || isAnyTrackPlaying();
     const analyser = getMonitorAnalyser();
-    if (analyser) {
-      const timeData = new Float32Array(analyser.fftSize);
-      analyser.getFloatTimeDomainData(timeData);
+    // El VU meter "Nivel de entrada / salida" es exclusivo de la Pista 1: no debe
+    // reflejar el Loop, la Pista 2, la Pista 3, el Mix ni ninguna otra fuente.
+    const track1Analyser = state.tracks.track1 ? state.tracks.track1.analyser : null;
+    if (track1Analyser) {
+      const timeData = new Float32Array(track1Analyser.fftSize);
+      track1Analyser.getFloatTimeDomainData(timeData);
       let sumSquares = 0;
       let peak = 0;
       for (let i = 0; i < timeData.length; i++) {
@@ -4343,7 +4389,68 @@ function startVUMeter() {
 
       if (peak >= CLIP_THRESHOLD) clipHoldUntil = performance.now() + CLIP_HOLD_MS;
       if (els.clipLight) els.clipLight.classList.toggle("active", performance.now() < clipHoldUntil);
+    } else {
+      if (els.vuFill) els.vuFill.style.width = "0%";
+      if (els.vuDb) els.vuDb.textContent = "-60.0 dBFS";
+      if (els.clipLight) els.clipLight.classList.remove("active");
+    }
+    // El VU meter "Nivel de entrada / salida" de la Pista 2 es exclusivo de la
+    // Pista 2: no debe reflejar el Loop, la Pista 1, la Pista 3, el Mix ni
+    // ninguna otra fuente.
+    const track2Analyser = state.tracks.track2 ? state.tracks.track2.analyser : null;
+    if (track2Analyser) {
+      const timeData2 = new Float32Array(track2Analyser.fftSize);
+      track2Analyser.getFloatTimeDomainData(timeData2);
+      let sumSquares2 = 0;
+      let peak2 = 0;
+      for (let i = 0; i < timeData2.length; i++) {
+        const v = timeData2[i];
+        sumSquares2 += v * v;
+        const av = Math.abs(v);
+        if (av > peak2) peak2 = av;
+      }
+      const rms2 = Math.sqrt(sumSquares2 / timeData2.length);
+      const dbfs2 = rms2 > 0 ? Math.max(-60, 20 * Math.log10(rms2)) : -60;
+      const pct2 = Math.max(0, Math.min(100, ((dbfs2 + 60) / 60) * 100));
+      if (els.vuFillTrack2) els.vuFillTrack2.style.width = pct2 + "%";
+      if (els.vuDbTrack2) els.vuDbTrack2.textContent = `${dbfs2.toFixed(1)} dBFS`;
 
+      if (peak2 >= CLIP_THRESHOLD) clipHoldUntilTrack2 = performance.now() + CLIP_HOLD_MS;
+      if (els.clipLightTrack2) els.clipLightTrack2.classList.toggle("active", performance.now() < clipHoldUntilTrack2);
+    } else {
+      if (els.vuFillTrack2) els.vuFillTrack2.style.width = "0%";
+      if (els.vuDbTrack2) els.vuDbTrack2.textContent = "-60.0 dBFS";
+      if (els.clipLightTrack2) els.clipLightTrack2.classList.remove("active");
+    }
+    // El VU meter "Nivel de entrada / salida" del Loop es exclusivo del Loop:
+    // no debe reflejar la Pista 1, la Pista 2, la Pista 3, el Mix ni ninguna
+    // otra fuente. state.analyser es el analizador propio del Loop.
+    const loopAnalyser = state.analyser || null;
+    if (loopAnalyser) {
+      const timeData3 = new Float32Array(loopAnalyser.fftSize);
+      loopAnalyser.getFloatTimeDomainData(timeData3);
+      let sumSquares3 = 0;
+      let peak3 = 0;
+      for (let i = 0; i < timeData3.length; i++) {
+        const v = timeData3[i];
+        sumSquares3 += v * v;
+        const av = Math.abs(v);
+        if (av > peak3) peak3 = av;
+      }
+      const rms3 = Math.sqrt(sumSquares3 / timeData3.length);
+      const dbfs3 = rms3 > 0 ? Math.max(-60, 20 * Math.log10(rms3)) : -60;
+      const pct3 = Math.max(0, Math.min(100, ((dbfs3 + 60) / 60) * 100));
+      if (els.vuFillLoop) els.vuFillLoop.style.width = pct3 + "%";
+      if (els.vuDbLoop) els.vuDbLoop.textContent = `${dbfs3.toFixed(1)} dBFS`;
+
+      if (peak3 >= CLIP_THRESHOLD) clipHoldUntilLoop = performance.now() + CLIP_HOLD_MS;
+      if (els.clipLightLoop) els.clipLightLoop.classList.toggle("active", performance.now() < clipHoldUntilLoop);
+    } else {
+      if (els.vuFillLoop) els.vuFillLoop.style.width = "0%";
+      if (els.vuDbLoop) els.vuDbLoop.textContent = "-60.0 dBFS";
+      if (els.clipLightLoop) els.clipLightLoop.classList.remove("active");
+    }
+    if (analyser) {
       if (scopeCtx && els.scopeCanvas) {
         const scopeData = new Uint8Array(analyser.fftSize);
         drawScope(scopeCtx, els.scopeCanvas, analyser, scopeData);
@@ -4353,9 +4460,6 @@ function startVUMeter() {
         drawSpectrum(spectrumCtx, els.spectrumCanvas, analyser, specData);
       }
     } else {
-      if (els.vuFill) els.vuFill.style.width = "0%";
-      if (els.vuDb) els.vuDb.textContent = "-60.0 dBFS";
-      if (els.clipLight) els.clipLight.classList.remove("active");
       clearScopeCanvases();
     }
     if (!stillActive) {
@@ -4363,6 +4467,12 @@ function startVUMeter() {
       if (els.vuFill) els.vuFill.style.width = "0%";
       if (els.vuDb) els.vuDb.textContent = "-60.0 dBFS";
       if (els.clipLight) els.clipLight.classList.remove("active");
+      if (els.vuFillTrack2) els.vuFillTrack2.style.width = "0%";
+      if (els.vuDbTrack2) els.vuDbTrack2.textContent = "-60.0 dBFS";
+      if (els.clipLightTrack2) els.clipLightTrack2.classList.remove("active");
+      if (els.vuFillLoop) els.vuFillLoop.style.width = "0%";
+      if (els.vuDbLoop) els.vuDbLoop.textContent = "-60.0 dBFS";
+      if (els.clipLightLoop) els.clipLightLoop.classList.remove("active");
       clearScopeCanvases();
       return;
     }
@@ -4377,6 +4487,12 @@ function stopVUMeter() {
   if (els.vuFill) els.vuFill.style.width = "0%";
   if (els.vuDb) els.vuDb.textContent = "-60.0 dBFS";
   if (els.clipLight) els.clipLight.classList.remove("active");
+  if (els.vuFillTrack2) els.vuFillTrack2.style.width = "0%";
+  if (els.vuDbTrack2) els.vuDbTrack2.textContent = "-60.0 dBFS";
+  if (els.clipLightTrack2) els.clipLightTrack2.classList.remove("active");
+  if (els.vuFillLoop) els.vuFillLoop.style.width = "0%";
+  if (els.vuDbLoop) els.vuDbLoop.textContent = "-60.0 dBFS";
+  if (els.clipLightLoop) els.clipLightLoop.classList.remove("active");
   clearScopeCanvases();
 }
 
