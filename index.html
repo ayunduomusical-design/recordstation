@@ -2745,6 +2745,10 @@
                 <button class="btn icon-btn" id="mix-clear" type="button" disabled aria-label="Borrar mezcla" title="Borrar pista">
                   <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
                 </button>
+                <button class="btn btn-secondary" id="mix-play23-record1" type="button" disabled title="Reproduce la pista 2 y la pista 3 mientras graba a la vez la pista 1, las tres empiezan juntas tras la cuenta de entrada">
+                  <svg class="icon" id="mix-play23-record1-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+                  <span id="mix-play23-record1-label">Reproducir pista 2 y pista 3, y grabar pista 1</span>
+                </button>
               </div>
             </div>
             <div class="track-wave-wrap" id="mix-viewport">
@@ -4873,6 +4877,45 @@ async function togglePlayAndRecordCombo(playId, recordId) {
   });
 }
 
+/* ─── REPRODUCIR PISTA 2 Y PISTA 3 MIENTRAS SE GRABA LA PISTA 1 ───
+   Variante de togglePlayAndRecordCombo que reproduce DOS pistas de
+   referencia (2 y 3) a la vez que graba la pista 1, reutilizando el mismo
+   startTrackRecording (cuenta de entrada + grabacion de una sola pista) y
+   el mismo startTrackPlayback/stopTrackPlayback que el resto de la app,
+   sin crear un motor de audio ni un mecanismo de sincronizacion nuevo. */
+async function togglePlay23AndRecord1() {
+  const recordTrack = state.tracks.track1;
+  const alreadyRunning = recordTrack.isRecording || (state.countInActive && state.activeTarget === "track1");
+
+  if (alreadyRunning) {
+    await stopTrackRecording("track1");
+    ["track2", "track3"].forEach(id => { if (state.tracks[id].isPlaying) stopTrackPlayback(id); });
+    return;
+  }
+
+  if (state.countInActive || state.isRecording || isAnyTrackRecording()) return;
+
+  const track2 = state.tracks.track2;
+  const track3 = state.tracks.track3;
+  if (!track2.buffer || !track3.buffer) {
+    showMicError("Para usar este boton primero carga o graba audio en la pista 2 y la pista 3: son las que se reproduciran mientras grabas la pista 1.");
+    return;
+  }
+
+  if (!(await initAudio())) return;
+  if (track2.isPlaying) stopTrackPlayback("track2");
+  if (track3.isPlaying) stopTrackPlayback("track3");
+  // Siempre se escuchan completas, desde el principio, igual que en el
+  // resto de botones combinados.
+  track2.seek = 0; updateSeekUI("track2");
+  track3.seek = 0; updateSeekUI("track3");
+
+  await startTrackRecording("track1", (syncTime) => {
+    startTrackPlayback("track2", syncTime);
+    startTrackPlayback("track3", syncTime);
+  });
+}
+
 /* ─── TRACK PLAYBACK ─── */
 function startTrackPlayback(id, when) {
   const track = state.tracks[id];
@@ -6445,6 +6488,22 @@ function updateComboButtons() {
   }
   updateMixRecordButton();
   updateDual12Buttons();
+  updatePlay23Record1Button();
+}
+
+/* Boton "Reproducir pista 2 y pista 3, y grabar pista 1": necesita que la
+   pista 2 y la pista 3 tengan audio cargado (son las que se van a
+   reproducir), y que no haya otra grabacion en curso en ningun otro lado
+   (salvo que sea esta misma, en cuyo caso queda habilitado para poder
+   detenerla). */
+function updatePlay23Record1Button() {
+  const btn = document.getElementById("mix-play23-record1");
+  if (!btn) return;
+  const runningHere = state.tracks.track1.isRecording || (state.countInActive && state.activeTarget === "track1");
+  if (runningHere) { btn.disabled = false; btn.classList.add("active"); return; }
+  btn.classList.remove("active");
+  const busyElsewhere = state.countInActive || state.isRecording || isAnyTrackRecording();
+  btn.disabled = !state.tracks.track2.buffer || !state.tracks.track3.buffer || busyElsewhere;
 }
 
 /* Boton "Reproducir pista 3, grabar pista 1 y pista 2": necesita que la
@@ -6888,6 +6947,13 @@ document.getElementById("track1-play-and-record")?.addEventListener("click", () 
 });
 document.getElementById("track2-play-and-record")?.addEventListener("click", () => {
   togglePlayAndRecordCombo("track2", "track1");
+});
+
+/* Boton "Reproducir pista 2 y pista 3, y grabar pista 1": reproduce las
+   pistas 2 y 3 a la vez que graba la pista 1, las tres arrancan juntas al
+   terminar la cuenta de entrada. */
+document.getElementById("mix-play23-record1")?.addEventListener("click", () => {
+  togglePlay23AndRecord1();
 });
 
 /* Boton "Grabar pista 1 y pista 2" / "Detener": graban ambas pistas a la
