@@ -2416,6 +2416,13 @@
                 <button class="btn icon-btn btn-download" id="track1-download-wav" type="button" disabled aria-label="Descargar pista como WAV" title="Descargar WAV (alta calidad)">
                   <svg class="icon" id="track1-dl-wav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
                 </button>
+              </div>
+              <div class="track-actions" style="grid-template-columns:1fr 36px;">
+                <button class="btn btn-main" id="track1-load" type="button">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"></path></svg>
+                  <span id="track1-load-label">Cargar audio</span>
+                </button>
+                <input type="file" id="track1-file-input" accept=".mp3,.wav,.wave,audio/mpeg,audio/wav,audio/x-wav,audio/wave" style="display:none">
                 <button class="btn icon-btn" id="track1-clear" type="button" disabled aria-label="Borrar pista" title="Borrar pista">
                   <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
                 </button>
@@ -2500,7 +2507,11 @@
               <svg class="icon" id="dual12-rec-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle></svg>
               <span id="dual12-rec-label">Grabar pista 1 y pista 2</span>
             </button>
-            <button class="btn btn-secondary" id="dual12-stop" type="button" style="flex:1;" disabled title="Detiene la grabacion simultanea de la pista 1 y la pista 2">
+            <button class="btn btn-secondary" id="play123-btn" type="button" style="flex:1;" title="Reproduce la pista 1, la pista 2 y la pista 3 al mismo tiempo, todas empiezan juntas">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+              <span>Reproducir pista 1, pista 2 y pista 3</span>
+            </button>
+            <button class="btn btn-secondary" id="dual12-stop" type="button" style="flex:1;" disabled title="Detiene la grabacion simultanea de la pista 1 y la pista 2, y tambien la reproduccion de las tres pistas">
               <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12"></rect></svg>
               <span>Detener</span>
             </button>
@@ -2543,6 +2554,13 @@
                 <button class="btn icon-btn btn-download" id="track2-download-wav" type="button" disabled aria-label="Descargar pista como WAV" title="Descargar WAV (alta calidad)">
                   <svg class="icon" id="track2-dl-wav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 3h14v2H5z"/></svg>
                 </button>
+              </div>
+              <div class="track-actions" style="grid-template-columns:1fr 36px;">
+                <button class="btn btn-main" id="track2-load" type="button">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"></path></svg>
+                  <span id="track2-load-label">Cargar audio</span>
+                </button>
+                <input type="file" id="track2-file-input" accept=".mp3,.wav,.wave,audio/mpeg,audio/wav,audio/x-wav,audio/wave" style="display:none">
                 <button class="btn icon-btn" id="track2-clear" type="button" disabled aria-label="Borrar pista" title="Borrar pista">
                   <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"></path></svg>
                 </button>
@@ -5845,6 +5863,7 @@ function setTrackStatus(id, mode) {
   e.playLabel.textContent = id === "mix" ? "Reproducir mezcla" : "Play";
   if (typeof updateMixButton === "function") updateMixButton();
   if (typeof updatePlayTodoBtn === "function") updatePlayTodoBtn();
+  if (typeof updateDual12Buttons === "function") updateDual12Buttons();
   if (typeof updateComboButtons === "function") updateComboButtons();
 }
 
@@ -6611,7 +6630,13 @@ function updateDual12Buttons() {
   const runningHere = !!state.dualRecordSimple || (state.countInActive && state.activeTarget === "dual12");
   const busyElsewhere = (state.countInActive || state.isRecording || isAnyTrackRecording() || !!state.multiTrackRecording) && !runningHere;
   recBtn.disabled = runningHere || busyElsewhere;
-  stopBtn.disabled = !runningHere;
+  // El boton DETENER tambien debe permanecer habilitado mientras alguna de
+  // las pistas 1, 2 o 3 este reproduciendose (p.ej. tras pulsar "Reproducir
+  // pista 1, pista 2 y pista 3"), ademas de sus condiciones previas de
+  // grabacion (runningHere). Se calcula en vivo, igual que updatePlayTodoBtn,
+  // para que se mantenga correcto incluso si una pista termina sola.
+  const track123Playing = sourceTrackIds.some(id => state.tracks[id].isPlaying);
+  stopBtn.disabled = !runningHere && !track123Playing;
 }
 
 async function startTrack1AndTrack2Recording() {
@@ -6735,6 +6760,27 @@ function tracksWithAudio() {
   return sourceTrackIds.filter(id => !!state.tracks[id].buffer);
 }
 
+/* ─── REPRODUCIR PISTA 1, PISTA 2 Y PISTA 3 AL MISMO TIEMPO ───
+   Reutiliza exactamente el mismo mecanismo de reproduccion sincronizada
+   que ya usa el boton "Play Loop + Pistas" (startTrackPlayback con un
+   mismo "when" de audioCtx.currentTime para todas), mismo motor de audio,
+   sin crear un reproductor distinto. Las pistas sin audio simplemente se
+   omiten; si ninguna tiene audio, no ocurre nada ni se genera error. */
+async function startTrack123Playback() {
+  if (state.countInActive || state.isRecording || isAnyTrackRecording() || state.multiTrackRecording || state.dualRecordSimple) return;
+  const ids = sourceTrackIds.filter(id => state.tracks[id].buffer && !state.tracks[id].isPlaying);
+  if (!ids.length) return;
+  if (!(await initAudio())) return;
+  const when = state.audioCtx.currentTime + 0.05;
+  ids.forEach(id => startTrackPlayback(id, when));
+  if (typeof updateDual12Buttons === "function") updateDual12Buttons();
+}
+
+function stopTrack123Playback() {
+  sourceTrackIds.forEach(id => { if (state.tracks[id].isPlaying) stopTrackPlayback(id); });
+  if (typeof updateDual12Buttons === "function") updateDual12Buttons();
+}
+
 async function createMixFromTracks() {
   if (!(await initAudio())) return;
   const mix = state.tracks.mix;
@@ -6822,8 +6868,8 @@ trackIds.forEach(id => {
   e.download?.addEventListener("click", () => downloadTrackMP3(id));
   e.downloadWav?.addEventListener("click", () => downloadTrackWAV(id));
 
-  // Pista 3: boton "Cargar audio" (no graba desde microfono)
-  if (track.loadedOnly && e.loadButton && e.fileInput) {
+  // Boton "Cargar audio" (mismo comportamiento reutilizado en Pista 1, 2 y 3)
+  if (e.loadButton && e.fileInput) {
     e.loadButton.addEventListener("click", () => e.fileInput.click());
     e.fileInput.addEventListener("change", async () => {
       const file = e.fileInput.files && e.fileInput.files[0];
@@ -6845,9 +6891,15 @@ document.getElementById("track2-play-and-record")?.addEventListener("click", () 
 });
 
 /* Boton "Grabar pista 1 y pista 2" / "Detener": graban ambas pistas a la
-   vez desde el microfono, sin reproducir ni exigir audio en la pista 3. */
+   vez desde el microfono, sin reproducir ni exigir audio en la pista 3.
+   "Detener" ademas detiene la reproduccion simultanea de pista 1, 2 y 3
+   iniciada por el boton "Reproducir pista 1, pista 2 y pista 3". */
 document.getElementById("dual12-record")?.addEventListener("click", () => startTrack1AndTrack2Recording());
-document.getElementById("dual12-stop")?.addEventListener("click", () => stopTrack1AndTrack2Recording());
+document.getElementById("play123-btn")?.addEventListener("click", () => startTrack123Playback());
+document.getElementById("dual12-stop")?.addEventListener("click", () => {
+  stopTrack1AndTrack2Recording();
+  stopTrack123Playback();
+});
 
 updateComboButtons();
 
